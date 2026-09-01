@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.window", "dom", "dom.iterable"]
+  },
+  "tasks": {
+    "test": "deno test tests/",
+    "check": "deno check market-cycle/index.ts bootstrap-data/index.ts train-challenger/index.ts calendar-replay/index.ts"
+  }
+}
