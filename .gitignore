@@ -1,0 +1,20 @@
+# Local platform state
+.netlify/
+.vercel/
+
+# Dependencies and generated artifacts
+node_modules/
+*.zip
+
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+*.local
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

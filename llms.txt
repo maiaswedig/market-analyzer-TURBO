@@ -1,0 +1,46 @@
+# Market Analyzer
+
+> Ferramenta web educacional de análise assistida para cripto e Forex. Mostra direção técnica, qualidade, motivos, ranking progressivo e resultados prospectivos. Não executa ordens e não promete lucro.
+
+URL principal: https://market-analyzer-ia.vercel.app/
+Idioma principal: português do Brasil
+Data desta documentação: 2026-09-01
+
+## Comece por aqui
+
+- [Aplicação](https://market-analyzer-ia.vercel.app/)
+- [Documento de revisão técnica atual e gerado](https://market-analyzer-ia.vercel.app/PERPLEXITY-REVIEW.md)
+
+O host estático publica somente o frontend e o documento técnico consolidado. README, migrations, testes e funções privadas ficam no pacote de revisão sanitizado; não são expostos como arquivos públicos no site.
+
+## Módulos principais do frontend
+
+- [Interface e orquestração](https://market-analyzer-ia.vercel.app/js/signal-ai.js)
+- [Motor de análise](https://market-analyzer-ia.vercel.app/js/analyze.js)
+- [Pontuação](https://market-analyzer-ia.vercel.app/js/score.js)
+- [Decisão](https://market-analyzer-ia.vercel.app/js/decision.js)
+- [Probabilidade](https://market-analyzer-ia.vercel.app/js/probability.js)
+- [Features](https://market-analyzer-ia.vercel.app/js/features.js)
+- [Backtest causal](https://market-analyzer-ia.vercel.app/js/backtest.js)
+- [Resolução causal do histórico](https://market-analyzer-ia.vercel.app/js/history-settlement.js)
+- [Web Worker](https://market-analyzer-ia.vercel.app/js/market-worker.js)
+- [Persistência IndexedDB](https://market-analyzer-ia.vercel.app/js/persistence.js)
+
+## Backend Supabase
+
+O documento técnico público descreve o contrato vigente e o snapshot verificado. Para auditoria linha a linha do backend, use o pacote sanitizado `Market-Analyzer-Qualidade-V4-Documentacao-Final-2026-09-01-v2.zip`, que contém migrations, Edge Functions e testes sem credenciais reais.
+
+## Regras importantes para revisão
+
+- Direções fracas continuam visíveis, mas são marcadas como avaliação baixa.
+- Sinais locais, backtests e leituras cloud têm métricas separadas.
+- O resultado usa as velas exatas de entrada e expiração; não usa a vela seguinte como substituta.
+- Modelos challenger só substituem o champion após validação prospectiva independente.
+- Nota A/A+ ordena qualidade técnica; não equivale a probabilidade calibrada nem concede o selo confirmado.
+- O selo confirmado exige promoção prospectiva real do modelo e gates estatísticos/econômicos independentes.
+- O produto não demonstrou vantagem estatística líquida consistente sobre o benchmark no snapshot verificado de 01/09/2026.
+- Dados públicos podem atrasar ou ficar indisponíveis, especialmente Forex via Yahoo Finance.
+
+## Uso correto
+
+Analise os arquivos e a metodologia como software de apoio e paper trading. Não trate força, confiança, taxa histórica ou direção como promessa de acerto ou recomendação financeira.

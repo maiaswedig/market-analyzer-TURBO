@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0d12">
+  <meta name="description" content="Market Analyzer: leitura clara de mercado, sinais explicados e histórico verificável para cripto e forex.">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <link rel="canonical" href="https://market-analyzer-ia.vercel.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="Market Analyzer">
+  <meta property="og:title" content="Market Analyzer — Cripto e Forex">
+  <meta property="og:description" content="Sinais explicados, ranking progressivo e histórico verificável para leitura de cripto e Forex.">
+  <meta property="og:url" content="https://market-analyzer-ia.vercel.app/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Market Analyzer — Cripto e Forex">
+  <meta name="twitter:description" content="Leitura assistida de mercado com sinais explicados e histórico verificável.">
+  <title>Market Analyzer — Cripto e Forex</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://www.okx.com">
+  <link rel="preconnect" href="https://query1.finance.yahoo.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="enhancements.css">
+  <link rel="stylesheet" href="ui-accessibility.css">
+  <link rel="stylesheet" href="market-analyzer.css">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Market Analyzer",
+      "url": "https://market-analyzer-ia.vercel.app/",
+      "description": "Ferramenta educacional de análise assistida para cripto e Forex com sinais explicados, ranking progressivo e histórico prospectivo.",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" }
+    }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Market Analyzer, início">
+      <span class="brand-mark">MA</span>
+      <span>Market <b>Analyzer</b><small>CRYPTO · FOREX</small></span>
+    </a>
+    <div class="header-status"><span class="pulse"></span><span id="feedStatus">Aguardando análise</span></div>
+  </header>
+
+  <main id="inicio" class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">CRIPTO E FOREX EM TEMPO REAL</p>
+        <h1>O mercado, organizado em uma <em>leitura clara.</em></h1>
+        <p class="hero-copy">Sinais explicados, ranking atualizado ativo por ativo e histórico verificável para você entender o contexto antes de decidir.</p>
+      </div>
+      <div id="globalDisclaimer" class="safety-note" role="note">Não executa ordens. Confirme preço, spread e gestão de risco na sua corretora antes de operar.</div>
+    </section>
+
+    <section class="grid main-grid" aria-label="Análise principal">
+      <aside class="panel controls-panel">
+        <div class="panel-heading"><div><p class="eyebrow">PAINEL</p><h2>Escolha o mercado</h2></div></div>
+        <label class="field-label" for="assetSelect">Ativo</label>
+        <select id="assetSelect" class="select"></select>
+        <div id="assetMeta" class="asset-meta"></div>
+
+        <span class="field-label">Tempo gráfico</span>
+        <div id="timeframes" class="timeframes" role="group" aria-label="Tempo gráfico"></div>
+
+        <details class="advanced-settings">
+          <summary>Configurações avançadas</summary>
+          <label class="field-label" for="deepCandles">Histórico para treinamento</label>
+          <select id="deepCandles" class="select">
+            <option value="3000">3.000 candles</option>
+            <option value="6000">6.000 candles</option>
+            <option value="10000" selected>10.000 candles (máximo)</option>
+          </select>
+          <p class="hint">A fonte pública pode entregar menos candles conforme o ativo e o intervalo.</p>
+          <label class="field-label" for="tiePolicy">Empate na corretora</label>
+          <select id="tiePolicy" class="select">
+            <option value="loss" selected>Contar como perda</option>
+            <option value="refund">Entrada reembolsada</option>
+            <option value="win">Contar como acerto</option>
+          </select>
+          <p class="hint">Use a regra real da sua corretora. Empates permanecem no histórico e no backtest.</p>
+        </details>
+
+        <div class="safety-rules" role="note"><b>Política única de qualidade</b><span>Nenhum filtro esconde uma direção existente. Pavio, volume, zonas, atraso, notícias e sessões reduzem a nota e podem marcar o sinal como “avaliação baixa”, com o motivo visível.</span></div>
+
+        <button id="analyzeBtn" class="button primary">Atualizar gráfico e leitura local <span>→</span></button>
+        <button id="trainBtn" class="button subtle">Treinar ativo selecionado</button>
+        <p id="analysisProgress" class="progress" aria-live="polite">Pronto para buscar candles reais.</p>
+      </aside>
+
+      <section class="signal-area">
+        <article id="officialSignalCard" class="panel official-signal-card waiting" aria-live="polite">
+          <div class="official-signal-head">
+            <div><p class="eyebrow">SINAL OFICIAL · MOTOR BACKEND 24/7</p><h2 id="officialSignalName">Aguardando a nuvem</h2><p id="officialSignalTime">O backend publicará a decisão congelada mais recente.</p></div>
+            <div class="official-signal-status"><span id="officialSignalQuality" class="cloud-status-pill">Carregando</span><span id="officialSignalGrade" class="grade" data-empty="true" aria-hidden="true"></span></div>
+          </div>
+          <div class="official-signal-core">
+            <div><span id="officialSignalDirection" class="direction neutral">AGUARDAR</span><p id="officialSignalSummary">Este cartão usa diretamente o motor cloud. A leitura local abaixo não substitui esta decisão.</p></div>
+            <div class="score-block"><span>FORÇA TÉCNICA</span><strong id="officialSignalScore">—</strong><small id="officialSignalProbability">Modelo: —</small></div>
+          </div>
+          <div class="official-signal-grid">
+            <div><span>EV estimado</span><b id="officialSignalEv">—</b></div>
+            <div><span>Amostra do modelo</span><b id="officialSignalSample">—</b></div>
+            <div><span>Entrada / expiração</span><b id="officialSignalWindow">—</b></div>
+            <div><span>Fonte da decisão</span><b id="officialSignalSource">Supabase 24/7</b></div>
+          </div>
+          <div id="officialSignalCriteria" class="official-signal-criteria">Critérios aguardando atualização.</div>
+          <div class="official-signal-actions"><button id="officialSignalOpen" type="button" class="button subtle small" disabled>Abrir gráfico e leitura complementar</button><span>O backend continua operando mesmo com esta página fechada.</span></div>
+          <p class="signal-disclaimer" role="note">Análise e paper trading; não é promessa de acerto nem recomendação financeira. Nota técnica e confirmação estatística são medidas separadas.</p>
+        </article>
+
+        <article id="signalCard" class="panel signal-card waiting" aria-live="polite">
+          <div class="signal-top">
+            <div><p class="eyebrow">LEITURA LOCAL COMPLEMENTAR</p><h2 id="signalName">Aguardando dados</h2><p id="signalTime">Selecione um ativo para atualizar gráfico e indicadores locais.</p><p id="signalFreshness" class="data-freshness" role="status">Dados: aguardando a primeira cotação.</p></div>
+            <span id="signalGrade" class="grade" data-empty="true" aria-hidden="true"></span>
+          </div>
+          <div class="verdict-row">
+            <div><span id="signalDirection" class="direction neutral">SEM SINAL</span><p id="signalSummary">O sistema sempre mostra COMPRA ou VENDA quando existe direção técnica e separa os níveis confirmado, técnico e avaliação baixa.</p></div>
+            <div class="score-block">
+              <span>FORÇA</span>
+              <strong id="signalScore">—</strong>
+              <small class="inline-value"><span id="signalConfidence">Confiança: —</span><button type="button" class="info-tooltip" aria-label="O que significa confiança" aria-describedby="tooltipConfidence">?</button><span id="tooltipConfidence" class="tooltip-content" role="tooltip">É uma estimativa calculada a partir dos dados e da validação histórica. Ela não é garantia de acerto.</span></small>
+            </div>
+          </div>
+          <div class="signal-grid">
+            <div><span>Preço de referência</span><b id="signalPrice">—</b></div>
+            <div><span>Risco / volatilidade</span><b id="signalRisk">—</b></div>
+            <div><span class="term-with-help">Confluência<button type="button" class="info-tooltip" aria-label="O que significa confluência" aria-describedby="tooltipConfluence">?</button><span id="tooltipConfluence" class="tooltip-content" role="tooltip">É o número de leituras independentes, como tendência, momentum e zonas, apontando para a mesma direção. Mais confluência não elimina o risco.</span></span><b id="signalConfluence">—</b></div>
+            <div><span class="term-with-help">Modelo local<button type="button" class="info-tooltip" aria-label="O que significa modelo local" aria-describedby="tooltipLocalModel">?</button><span id="tooltipLocalModel" class="tooltip-content" role="tooltip">É o modelo treinado e salvo apenas neste navegador. Seus dados não são enviados para uma corretora por esta tela.</span></span><b id="signalModel">Sem modelo</b></div>
+          </div>
+          <div id="signalBadges" class="badges"></div>
+          <div class="next-candle"><span id="nextCandleLabel">PRÓXIMA VELA</span><b id="nextCandleTime">—</b><small id="nextCandleCountdown">Escolha um tempo gráfico.</small></div>
+          <p id="signalDisclaimer" class="signal-disclaimer" role="note">Sinal assistido, não recomendação financeira. Confirme a cotação, o spread e seu risco antes de operar.</p>
+        </article>
+
+        <section class="grid scanner-grid scanner-grid-priority" aria-label="Melhores oportunidades do scanner">
+          <article class="panel scanner-panel">
+            <div class="scanner-header"><div><p class="eyebrow">SCANNER LOCAL COMPLEMENTAR</p><h2><span class="term-with-help">Comparação rápida no navegador<button type="button" class="info-tooltip" aria-label="Como o ranking é ordenado" aria-describedby="tooltipOpportunityRanking">?</button><span id="tooltipOpportunityRanking" class="tooltip-content" role="tooltip">Esta lista é calculada no navegador para comparação e gráfico. O cartão oficial acima e a lista 24/7 abaixo vêm do backend e são a referência operacional congelada.</span></span></h2></div><button id="scanBtn" class="button subtle small">Atualizar lista local</button></div>
+            <div class="scanner-controls">
+              <select id="scanMarket" class="select compact"><option value="Cripto">Cripto</option><option value="Forex">Forex</option><option value="Ambos">Cripto + Forex</option></select>
+              <select id="scanCount" class="select compact"><option value="6">6 ativos</option><option value="10" selected>10 ativos</option><option value="16">16 ativos</option></select>
+              <span id="scanStatus" class="muted">Aguardando primeira varredura…</span>
+            </div>
+            <p class="scanner-ranking-note">Ordem: confirmado primeiro; sinal técnico com estatística fraca depois; avaliação baixa por último. Nenhuma direção é apagada. Cada nível constrói sua taxa quando o sinal foi publicado antes da entrada e o dado estava atual; leituras atrasadas ficam apenas visíveis. Ranking geral: força média 55% · taxa ajustada pela amostra 35% · robustez da amostra 10%.</p>
+            <div class="table-wrap"><table id="opportunitiesTable" class="responsive-table scanner-table"><caption>Oportunidades encontradas pelo scanner, ordenadas pela melhor oportunidade geral</caption><thead><tr><th scope="col">Ativo</th><th scope="col">Sinal / nota</th><th scope="col">Força média</th><th scope="col">Taxa estimada / amostra</th><th scope="col">Leitura</th><th scope="col">Última análise</th><th scope="col">Ação</th></tr></thead><tbody id="scannerRows"><tr><td colspan="7" class="empty-row empty-awaiting">A lista será preenchida ativo por ativo durante a varredura. A melhor leitura encontrada sobe automaticamente para o sinal atual.</td></tr></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="grid chart-pair">
+          <article class="panel chart-panel">
+            <div class="chart-head"><div><p class="eyebrow">GRÁFICO AO VIVO</p><h2 id="liveChartTitle">TradingView</h2></div><span class="live-pill">MERCADO AO VIVO</span></div>
+            <div id="liveChartWrap" class="live-chart-wrap"><div id="tradingViewContainer" class="tradingview-widget-container chart-lazy-placeholder" aria-label="Gráfico ao vivo do TradingView"><span>O gráfico será carregado quando esta área se aproximar da tela.</span></div></div>
+            <p class="chart-caption">Referência visual ao vivo. Confirme preço e spread na sua corretora.</p>
+          </article>
+          <article class="panel chart-panel internal-chart-panel">
+            <div class="chart-head"><div><p class="eyebrow">LEITURA DO MOTOR</p><h2 id="internalChartTitle">Candles, EMAs e zonas</h2></div><span id="chartRange" class="muted">—</span></div>
+            <div class="chart-legend"><span class="term-with-help"><span class="ema9">EMA 9</span><button type="button" class="info-tooltip" aria-label="O que é EMA 9" aria-describedby="tooltipEma9">?</button><span id="tooltipEma9" class="tooltip-content" role="tooltip">Média móvel exponencial de 9 períodos. Reage mais rápido às mudanças recentes de preço.</span></span><span class="term-with-help"><span class="ema21">EMA 21</span><button type="button" class="info-tooltip" aria-label="O que é EMA 21" aria-describedby="tooltipEma21">?</button><span id="tooltipEma21" class="tooltip-content" role="tooltip">Média móvel exponencial de 21 períodos. Ajuda a ler o ritmo intermediário da tendência.</span></span><span class="term-with-help"><span class="ema50">EMA 50</span><button type="button" class="info-tooltip" aria-label="O que é EMA 50" aria-describedby="tooltipEma50">?</button><span id="tooltipEma50" class="tooltip-content" role="tooltip">Média móvel exponencial de 50 períodos. É uma referência mais lenta para o contexto de tendência.</span></span><span class="term-with-help"><span class="support">Suporte</span><button type="button" class="info-tooltip" aria-label="O que é suporte" aria-describedby="tooltipSupport">?</button><span id="tooltipSupport" class="tooltip-content" role="tooltip">Faixa em que o preço encontrou demanda antes. Uma venda perto de suporte forte pode ter pouco espaço para continuar.</span></span><span class="term-with-help"><span class="resistance">Resistência</span><button type="button" class="info-tooltip" aria-label="O que é resistência" aria-describedby="tooltipResistance">?</button><span id="tooltipResistance" class="tooltip-content" role="tooltip">Faixa em que o preço encontrou oferta antes. Uma compra perto de resistência forte pode ter pouco espaço para continuar.</span></span></div>
+            <div id="analysisChartWrap" class="canvas-wrap"><canvas id="chartCanvas" width="1000" height="420" aria-label="Gráfico próprio com candles, EMAs e zonas"></canvas></div>
+            <p id="chartCaption" class="chart-caption">Inclui a vela em andamento para leitura atual; o treinamento usa somente velas já fechadas.</p>
+          </article>
+        </section>
+      </section>
+    </section>
+
+    <details id="workspaceDetails" class="workspace-details">
+      <summary><span>Histórico, validação e automação</span><small id="workspaceDetailsStatus">Abra para acompanhar detalhes</small></summary>
+      <div class="workspace-details-content">
+    <section class="grid lower-grid">
+      <article class="panel reasons-panel">
+        <div class="panel-heading"><div><p class="eyebrow">LEITURA DO MERCADO</p><h2>Por que este sinal?</h2></div></div>
+        <div id="reasons" class="reason-list empty-state empty-awaiting">Faça uma análise para ver indicadores, filtros e divergências.</div>
+      </article>
+      <article class="panel details-panel">
+        <div class="panel-heading"><div><p class="eyebrow">INDICADORES</p><h2>Dados usados</h2></div></div>
+        <div id="details" class="metric-grid empty-state empty-awaiting">Ainda sem dados.</div>
+      </article>
+    </section>
+
+    <section class="panel automation-panel">
+      <div class="automation-intro"><p class="eyebrow">AUTOMAÇÃO LOCAL COMPLEMENTAR</p><h2>Scanner e <span class="term-with-help">aprendizado local<button type="button" class="info-tooltip" aria-label="O que significa aprendizado local" aria-describedby="tooltipAdaptiveModel">?</button><span id="tooltipAdaptiveModel" class="tooltip-content" role="tooltip">Este treino existe apenas neste navegador e não substitui o modelo champion/challenger do backend.</span></span></h2><p>Esta automação funciona somente com a página aberta. O motor oficial cloud continua coletando, avaliando e treinando com o site fechado.</p></div>
+      <div class="automation-controls">
+        <label class="switch"><input id="autoRefresh" type="checkbox" checked><span></span>Atualizar sinal atual</label>
+        <select id="refreshEvery" class="select compact" aria-label="Intervalo do sinal atual"><option value="60">a cada 1 min</option><option value="180">a cada 3 min</option><option value="300">a cada 5 min</option></select>
+        <label class="switch"><input id="autoScan" type="checkbox" checked><span></span>Scanner automático</label>
+        <select id="scanEvery" class="select compact" aria-label="Intervalo do scanner"><option value="180">a cada 3 min</option><option value="300" selected>a cada 5 min</option><option value="600">a cada 10 min</option><option value="900">a cada 15 min</option></select>
+      </div>
+      <p id="automationStatus" class="progress">Scanner automático será iniciado após a primeira análise.</p>
+      <p id="persistenceStatus" class="progress" aria-live="polite">Preparando histórico durável neste navegador.</p>
+      <section id="scannerProgress" class="scanner-progress" aria-live="polite" aria-atomic="true" aria-label="Progresso do scanner automático" data-state="idle">
+        <div class="scanner-progress-top"><span id="scannerProgressCurrent">Aguardando primeira varredura…</span><strong id="scannerProgressCount" hidden></strong></div>
+        <div id="scannerProgressTrack" class="scanner-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Scanner aguardando"><span id="scannerProgressBar"></span></div>
+        <p class="scanner-progress-meta">Última atualização: <time id="scannerLastUpdated">ainda não executado</time></p>
+      </section>
+    </section>
+
+    <section id="cloudMonitor" class="panel cloud-monitor" data-state="local" aria-labelledby="cloudMonitorTitle">
+      <div class="cloud-monitor-header">
+        <div>
+          <p class="eyebrow">MONITORAMENTO 24/7</p>
+          <h2 id="cloudMonitorTitle">Oportunidades oficiais do backend</h2>
+        </div>
+        <div class="cloud-monitor-actions">
+          <span id="cloudConnectionBadge" class="cloud-status-pill" role="status">Modo local</span>
+          <button id="cloudRefreshBtn" type="button" class="button subtle small">Atualizar nuvem</button>
+        </div>
+      </div>
+      <p class="cloud-monitor-copy">Esta é a fonte oficial dos sinais mostrados no site. Cada decisão é congelada no backend antes da entrada e permanece separada da leitura local. Forex depende do Yahoo Finance e não possui uma segunda fonte equivalente; atraso ou indisponibilidade ficam explícitos e rebaixam a qualidade sem esconder a direção.</p>
+      <div class="cloud-separation-note" role="note"><b>Simulação separada:</b> resultados, EV e drawdown abaixo pertencem somente aos registros prospectivos da nuvem. Eles não são somados às métricas locais e não representam promessa de resultado.</div>
+      <div class="cloud-overview" aria-label="Resumo do monitoramento 24/7">
+        <div><span>Ativo processado</span><b id="cloudProcessedAsset">—</b></div>
+        <div><span>Última coleta</span><b id="cloudLastCollection">—</b></div>
+        <div><span>Sinais resolvidos</span><b id="cloudResolvedCount">—</b><small id="cloudResolvedMode">prospectivos · política única</small></div>
+        <div><span>Paper EV</span><b id="cloudPaperEv">—</b><small id="cloudPaperMode">simulado · política única</small></div>
+        <div><span>Paper drawdown</span><b id="cloudPaperDrawdown">—</b><small>simulado</small></div>
+        <div><span>Benchmark aleatório</span><b id="cloudPaperBenchmark">—</b><small>50% com o mesmo payout · custo adicional zero</small></div>
+      </div>
+      <div class="cloud-quality-block" aria-labelledby="cloudQualityTitle">
+        <div class="cloud-quality-heading">
+          <h3 id="cloudQualityTitle">Curvas separadas por qualidade</h3>
+          <p>Confirmado, técnico e baixo nunca são misturados. Uma classe vazia significa que ainda não há amostra prospectiva — não significa 0% de acerto.</p>
+        </div>
+        <div id="cloudQualityBreakdown" class="cloud-quality-grid" aria-live="polite">
+          <div class="cloud-quality-card is-empty"><span>Confirmado</span><b>Sem amostra</b><small>Aguardando registros resolvidos</small></div>
+          <div class="cloud-quality-card is-empty"><span>Técnico</span><b>Sem amostra</b><small>Aguardando registros resolvidos</small></div>
+          <div class="cloud-quality-card is-empty"><span>Avaliação baixa</span><b>Sem amostra</b><small>Aguardando registros resolvidos</small></div>
+        </div>
+      </div>
+      <div class="table-wrap cloud-table-wrap"><table id="cloudOpportunitiesTable" class="responsive-table cloud-opportunities-table"><caption>Oportunidades prospectivas da política única do monitoramento 24/7, mantidas separadas dos sinais e estatísticas locais</caption><thead><tr><th scope="col">Ativo</th><th scope="col">Tempo</th><th scope="col">Sinal / qualidade</th><th scope="col">Força</th><th scope="col">Taxa real / amostra</th><th scope="col">EV simulado</th><th scope="col">Critérios / atualização</th></tr></thead><tbody id="cloudOpportunityRows"><tr><td colspan="7" class="empty-row empty-awaiting">Aguardando configuração opcional da nuvem. A leitura local continua funcionando normalmente.</td></tr></tbody></table></div>
+      <div class="cloud-grade-history" aria-labelledby="cloudGradeHistoryTitle">
+        <div class="cloud-quality-heading"><h3 id="cloudGradeHistoryTitle">Histórico cloud A/A+ · paper trading</h3><p>Mostra todo A e A+ congelado antes da entrada, inclusive com avaliação baixa. A nota resume a força técnica; a qualidade informa a validação estatística. Esta amostra é somente visual e não alimenta o ranking local.</p></div>
+        <div id="cloudGradeHistoryOverview" class="history-overview cloud-grade-history-overview" aria-live="polite"><div><span>A/A+ encontrados</span><b>0</b></div><div><span>Taxa observada</span><b>—</b></div><div><span>Acertos / erros / empates</span><b>0 / 0 / 0</b></div><div><span>Confirmado/técnico · baixa</span><b>0 · 0</b></div></div>
+        <div class="table-wrap cloud-table-wrap"><table id="cloudGradeHistoryTable" class="responsive-table cloud-opportunities-table"><caption>Últimos 200 sinais A e A+ do paper trading em nuvem, incluindo avaliação baixa e mantidos separados do motor local</caption><thead><tr><th scope="col">Emissão</th><th scope="col">Ativo / tempo</th><th scope="col">Sinal / nota</th><th scope="col">Qualidade</th><th scope="col">Entrada / expiração</th><th scope="col">Força / modelo</th><th scope="col">Resultado</th><th scope="col">Paper P&amp;L / critérios</th></tr></thead><tbody id="cloudGradeHistoryRows"><tr><td colspan="8" class="empty-row empty-awaiting">Aguardando conexão com o histórico prospectivo da nuvem.</td></tr></tbody></table></div>
+      </div>
+      <p id="cloudStatusDetail" class="cloud-status-detail" aria-live="polite">Nuvem não configurada · modo local ativo.</p>
+    </section>
+
+    <section class="grid scanner-grid scanner-grid-validation">
+      <article class="panel model-panel">
+        <div class="panel-heading"><div><p class="eyebrow">VALIDAÇÃO</p><h2><span class="term-with-help">Modelo e backtest<button type="button" class="info-tooltip" aria-label="O que é backtest" aria-describedby="tooltipBacktest">?</button><span id="tooltipBacktest" class="tooltip-content" role="tooltip">Backtest aplica as mesmas regras a candles históricos. O limiar é escolhido no período antigo e precisa confirmar resultado no período recente; não é previsão nem garantia.</span></span></h2></div></div>
+        <div id="modelSummary" class="model-summary"><span class="model-dot"></span><div><b>Nenhum modelo validado</b><p>Treine com dados históricos para calibrar a probabilidade local.</p></div></div>
+        <div id="learningFeedback" class="learning-feedback">Feedback: cada sinal é comparado ao fechamento da expiração registrada; acertos, erros e empates ficam separados.</div>
+        <button id="backtestBtn" class="button subtle">Rodar backtest do ativo</button>
+        <div id="backtestResult" class="backtest-result">O backtest estima como a regra teria se comportado no histórico. Não prevê resultado futuro.</div>
+      </article>
+    </section>
+
+    <section class="panel history-panel">
+      <div class="history-header"><div><p class="eyebrow">HISTÓRICO A/A+</p><h2>Resultados de todos os sinais A e A+</h2><p>Esta visão inclui todo sinal A/A+ congelado antes da entrada, mesmo com avaliação baixa. A nota representa a força técnica conjunta; a qualidade mostra se há confirmação estatística. Exibir um sinal baixo aqui não muda o motor, o treino nem sua elegibilidade para o ranking.</p></div><div class="history-actions"><select id="historyFilter" class="select compact" aria-label="Filtrar histórico por ativo"><option value="all">Todos os ativos</option></select><button id="exportHistoryCsv" type="button" class="button subtle small export-button" aria-describedby="historyExportHint">Exportar CSV A/A+</button><span id="historyExportHint" class="sr-only">Baixa todos os sinais A/A+, inclusive os de avaliação baixa, em formato CSV para abrir no Excel ou Google Sheets.</span></div></div>
+      <div id="historyOverview" class="history-overview"><div><span>Sinais A/A+ resolvidos</span><b>0</b></div><div><span>Taxa observada</span><b>—</b></div><div><span>Acertos / erros / empates</span><b>0 / 0 / 0</b></div><div><span>Qualificados · baixa · internos</span><b>0 · 0 · 0</b></div></div>
+      <p id="historyBenchmark" class="history-benchmark" role="status">Referência: 50% é a taxa esperada em uma escolha aleatória de compra ou venda.</p>
+      <p id="historyResolutionStatus" class="history-resolution-status" role="status" aria-live="polite">Os resultados vencidos são conferidos automaticamente pela vela exata de expiração.</p>
+      <div class="table-wrap history-table"><table id="historyTable" class="responsive-table history-data-table"><caption>Histórico operacional de sinais A e A+ por ativo, tempo gráfico, expiração, direção e qualidade na emissão</caption><thead><tr><th scope="col">Ativo</th><th scope="col">Tempo</th><th scope="col">Expiração</th><th scope="col">Sinal / nota</th><th scope="col">Resolvidos</th><th scope="col">Acertos</th><th scope="col">Erros / empates</th><th scope="col">Taxa</th><th scope="col">Último resultado</th></tr></thead><tbody id="historyRows"><tr><td colspan="9" class="empty-row empty-awaiting">Aguardando o primeiro sinal A ou A+ elegível.</td></tr></tbody></table></div>
+    </section>
+      </div>
+    </details>
+
+    <section class="disclaimer">
+      <b>Importante:</b> isto é uma ferramenta educacional de apoio à decisão, não recomendação financeira. Mercados são arriscados; dados públicos podem atrasar, ter falhas ou diferir da sua corretora. Nunca opere valor que não pode perder.
+    </section>
+  </main>
+
+  <footer>Market Analyzer · análise local no navegador · candles: OKX, Coinbase Exchange, Kraken e Yahoo Finance (com reserva pública) · TradingView é referência visual · calendário econômico público quando disponível · <a href="/llms.txt">guia para assistentes</a> · <a href="/PERPLEXITY-REVIEW.md">documentação técnica</a></footer>
+
+  <div id="onboardingModal" class="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" aria-describedby="onboardingDescription" aria-hidden="true" hidden>
+    <div id="onboardingDialog" class="onboarding-dialog" tabindex="-1">
+      <button id="onboardingClose" class="onboarding-close" type="button" aria-label="Fechar introdução">×</button>
+      <p class="eyebrow">BEM-VINDO AO MARKET ANALYZER</p>
+      <h2 id="onboardingTitle">Como ler a análise em quatro passos</h2>
+      <p id="onboardingDescription" class="onboarding-copy">Esta ferramenta organiza dados públicos para apoiar sua leitura. Ela não opera na sua corretora e não garante resultado.</p>
+      <ol class="onboarding-steps">
+        <li><span>1</span><div><b>Escolha o ativo e o tempo gráfico</b><p>Use o mesmo intervalo que pretende observar. A próxima vela é mostrada no horário do seu navegador.</p></div></li>
+        <li><span>2</span><div><b>Diferencie os três níveis</b><p>“Confirmado” tem estatística e EV favoráveis. “Técnico” ainda tem estatística fraca. “Avaliação baixa” mantém COMPRA/VENDA visível, mostra quais filtros falharam e é medido em grupo separado.</p></div></li>
+        <li><span>3</span><div><b>Compare com o gráfico ao vivo</b><p>Confira cotação, spread, zonas e contexto no gráfico antes de qualquer decisão.</p></div></li>
+        <li><span>4</span><div><b>Acompanhe o histórico local</b><p>O sistema compara o sinal com o fechamento da expiração registrada (E1, E2 ou E3) e usa E1 no próximo retreino validado.</p></div></li>
+      </ol>
+      <div class="onboarding-actions"><button id="onboardingStart" type="button" class="button primary">Entendi, começar</button><button id="onboardingSkip" type="button" class="button text-button">Fechar por enquanto</button></div>
+    </div>
+  </div>
+  <script src="cloud-config.js"></script>
+  <script type="module" src="js/signal-ai.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "market-analyzer-browser",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:edge": "node --experimental-strip-types tools/run-edge-tests-node.mjs",
+    "test:causality": "node tools/verify-local-causality.mjs",
+    "test:history": "node tools/verify-history-settlement.mjs",
+    "test:history-policy": "node tools/verify-history-policy.mjs",
+    "test:ranking": "node tools/verify-ranking-snapshot.mjs",
+    "test:scanner": "node tools/verify-scanner-queue.mjs",
+    "test:security": "node tools/verify-security-release.mjs",
+    "test:backend-score": "node tools/verify-backend-score-contract.mjs",
+    "test:backtest-replay": "node tools/verify-backtest-replay.mjs",
+    "test:score-calibration": "node tools/verify-score-calibration.mjs",
+    "docs:technical-review": "node tools/generate-technical-review.mjs",
+    "test:technical-review": "node tools/verify-technical-review.mjs",
+    "test:public-docs": "node tools/check-public-docs.mjs",
+    "test:single-policy-frontend": "node tools/verify-single-policy-frontend.mjs",
+    "calibrate:score": "node tools/calibrate-score.mjs"
+  }
+}

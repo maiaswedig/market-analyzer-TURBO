@@ -1,0 +1,17 @@
+:root {
+  --bg:#0a0d12;
+  --panel:#11161d;
+  --panel2:#151b23;
+  --line:#252d37;
+  --text:#f1f5f8;
+  --muted:#8f9aa8;
+  --green:#78e6c0;
+  --red:#ff7788;
+  --amber:#f0c66d;
+  --blue:#68baff;
+  --ink:#02070c;
+  font-family:"DM Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--text);
+  background:var(--bg);
+  color-scheme:dark;
+}
