@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-01T12:59:03.252784Z",
+  "source": "Supabase production, read-only queries",
+  "projectRef": "fmxxyysedxawswwcuhgg",
+  "migrationsApplied": 27,
+  "latestMigration": "single_policy_zero_cost",
+  "edgeFunctions": [
+    { "name": "bootstrap-data", "version": 6, "verifyJwt": true, "status": "ACTIVE" },
+    { "name": "market-cycle", "version": 10, "verifyJwt": true, "status": "ACTIVE" },
+    { "name": "train-challenger", "version": 5, "verifyJwt": true, "status": "ACTIVE" },
+    { "name": "calendar-replay", "version": 1, "verifyJwt": true, "status": "ACTIVE" }
+  ],
+  "schedules": [
+    { "name": "signal-atlas-market-cycle", "schedule": "* * * * *", "active": true },
+    { "name": "signal-atlas-train-challenger", "schedule": "7 * * * *", "active": true }
+  ],
+  "decisionLedger": {
+    "total": 7978,
+    "qualityContractV4": 3124,
+    "gradeAOrAboveV4": 970,
+    "confirmedV4": 0,
+    "latestDecisionAt": "2026-09-01T12:59:02.641410Z"
+  },
+  "deploymentEvents": {
+    "bootstrapChampion": 27,
+    "promoteChampion": 0,
+    "latestAt": "2026-09-01T00:07:01.422830Z"
+  },
+  "paperSummary": [
+    { "mode": "agressivo (legado)", "trades": 2615, "evNetPerTrade": -0.1336, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0386, "maxDrawdown": 367.81 },
+    { "mode": "conservador (legado)", "trades": 2615, "evNetPerTrade": -0.1336, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0386, "maxDrawdown": 367.81 },
+    { "mode": "neutro (legado)", "trades": 2615, "evNetPerTrade": -0.1336, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0386, "maxDrawdown": 367.81 }
+  ],
+  "currentPaperSummary": {
+    "policy": "single",
+    "operationCost": 0,
+    "trades": 0,
+    "benchmarkEvPerTrade": -0.0750,
+    "evNetPerTrade": null,
+    "maxDrawdown": 0
+  },
+  "systemHealth": {
+    "status": "partial",
+    "processedAsset": "USDJPY=X",
+    "timeframe": "H1",
+    "resolvedProspectiveSignals": 7845,
+    "updatedAt": "2026-09-01T12:58:08.600Z"
+  }
+}
