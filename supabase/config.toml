@@ -1,0 +1,18 @@
+# Security-sensitive settings are versioned so a CLI deploy cannot silently
+# expose a worker endpoint.  These three functions also reject user-session
+# JWTs and require SIGNAL_ATLAS_CRON_SECRET inside the handler.
+
+[functions.market-cycle]
+verify_jwt = true
+
+[functions.train-challenger]
+verify_jwt = true
+
+[functions.bootstrap-data]
+verify_jwt = true
+
+# Read-only public transport for bounded historical calendar snapshots.  The
+# gateway still requires a valid Supabase JWT/publishable client credential;
+# the function exposes no private tables and calls one service-only projection.
+[functions.calendar-replay]
+verify_jwt = true
