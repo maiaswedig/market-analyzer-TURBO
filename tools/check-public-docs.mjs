@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 
 const targets = [
-  ['https://market-analyzer-ia.netlify.app/PERPLEXITY-REVIEW.md', /Contrato de qualidade vigente: \*\*v4/, /oito de oito pontos aprovados/i],
-  ['https://market-analyzer-ia.netlify.app/llms.txt', /2026-09-01/, /Nota A\/A\+ ordena qualidade técnica/],
-  ['https://market-analyzer-ia.netlify.app/', /Market Analyzer/, /PERPLEXITY-REVIEW\.md/]
+  ['https://market-analyzer-ia.vercel.app/PERPLEXITY-REVIEW.md', /Contrato de qualidade vigente: \*\*v4/, /oito de oito pontos aprovados/i],
+  ['https://market-analyzer-ia.vercel.app/llms.txt', /2026-09-01/, /Nota A\/A\+ ordena qualidade técnica/],
+  ['https://market-analyzer-ia.vercel.app/', /Market Analyzer/, /PERPLEXITY-REVIEW\.md/]
 ];
 
 for (const [url, firstPattern, secondPattern] of targets) {
