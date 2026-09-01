@@ -44,7 +44,7 @@ Esse quadro descreve o que está incluído no pacote; não substitui a verifica�
 - **Expiração flexível local:** E1, E2 e E3 são acompanhadas separadamente. O backend cloud atual usa E1 para não aplicar probabilidades treinadas em um horizonte a outro.
 - **Persistência real:** modelos aceitos, histórico, feedback/calibração e preferências sobrevivem ao fechamento da aba no mesmo navegador.
 - **Histórico auditável e visão operacional:** o primeiro sinal publicado na vela é congelado e depois comparado com a expiração registrada. O ledger bruto preserva todos os níveis para treino; a tabela e o CSV mostram todos os A/A+, inclusive os de avaliação baixa, com a qualidade explícita para não inflar a interpretação da nota.
-- **Custos e benchmark:** spread/slippage configurado entra no EV; a taxa aparece junto da referência aleatória de 50% e do EV desse benchmark sob a mesma política de payout/custo.
+- **Economia e benchmark:** a política única vigente registra custo adicional zero, conforme solicitado. A taxa aparece junto da referência aleatória de 50% e do EV desse benchmark sob o mesmo payout; spread e slippage reais continuam sendo riscos externos que o usuário deve conferir na corretora.
 - **Acessibilidade:** onboarding, tooltips, tabelas semânticas e cartões responsivos em telas pequenas.
 
 ## Como a aprendizagem realmente funciona
@@ -67,11 +67,11 @@ A análise da revisão v11, os resultados das consultas e a correção de veloci
 
 ## Manter online gratuitamente
 
-O frontend é estático e pode ser publicado na Netlify com a raiz desta pasta como diretório de publicação. Não há comando de build.
+O frontend é estático, está publicado na Vercel e não possui comando de build. O projeto `market-analyzer-ia` está conectado à branch `main` do repositório público `maiaswedig/market-analyzer-TURBO`, permitindo novos deploys a partir do GitHub. O `netlify.toml` permanece apenas como configuração alternativa de recuperação; a Netlify não é o domínio canônico vigente.
 
 Para funcionar somente no navegador, basta publicar os arquivos. Para continuar coletando com o site fechado, também é necessário aplicar as migrations, implantar as quatro Edge Functions e ativar os agendamentos no Supabase. O arquivo `cloud-config.example.js` mostra a estrutura da configuração pública do frontend; nenhuma chave administrativa pode ser colocada no navegador.
 
-A implantação atual requer todas as migrations `001`–`026` presentes na pasta. Em especial, `006`–`009` adicionam métricas/ranking por modo, índices e visões públicas; a `010` congela o primeiro evento de cada slot, versiona a política real e torna artefatos idempotentes; a `011` aplica autenticação dupla e remove a API pública legada; a `012` congela o instante causal das resoluções e revisões; a `013` publica curvas diagnósticas separadas por modo e qualidade sem reclassificar o histórico; a `014` instala o laboratório prospectivo de decisões independentes; a `015` cobre sua chave estrangeira de política com índice; a `016` recupera lacunas de candles exatos por uma fila privada, limitada e auditável; a `017` encerra como cancelado o trabalho de fila que deixou de ter decisão pendente; a `018` remove trabalho irmão órfão após abandono terminal; a `019` centraliza o EV de `loss`, `refund` e `win`; a `020` adiciona M30 ao tipo cloud; a `021` ativa M30 no runtime e inicia o arquivo prospectivo do calendário; a `022` fixa a leitura `as-of` na observação versionada; a `023` cria fotografias completas por coleta e a ponte de replay causal; a `024` publica o histórico cloud A/A+; a `025` expõe as explicações públicas das decisões; e a `026` desacopla a nota técnica da confirmação prospectiva e cria a fonte canônica do navegador. Uma reconstrução parcial fica incompatível com o frontend atual.
+A implantação atual requer todas as migrations `001`–`027` presentes na pasta. Em especial, `006`–`009` adicionam métricas/ranking por modo, índices e visões públicas; a `010` congela o primeiro evento de cada slot, versiona a política real e torna artefatos idempotentes; a `011` aplica autenticação dupla e remove a API pública legada; a `012` congela o instante causal das resoluções e revisões; a `013` publica curvas diagnósticas separadas por modo e qualidade sem reclassificar o histórico; a `014` instala o laboratório prospectivo de decisões independentes; a `015` cobre sua chave estrangeira de política com índice; a `016` recupera lacunas de candles exatos por uma fila privada, limitada e auditável; a `017` encerra como cancelado o trabalho de fila que deixou de ter decisão pendente; a `018` remove trabalho irmão órfão após abandono terminal; a `019` centraliza o EV de `loss`, `refund` e `win`; a `020` adiciona M30 ao tipo cloud; a `021` ativa M30 no runtime e inicia o arquivo prospectivo do calendário; a `022` fixa a leitura `as-of` na observação versionada; a `023` cria fotografias completas por coleta e a ponte de replay causal; a `024` publica o histórico cloud A/A+; a `025` expõe as explicações públicas das decisões; a `026` desacopla a nota técnica da confirmação prospectiva e cria a fonte canônica do navegador; e a `027` instala a política operacional única com custo adicional zero sem reescrever o legado. Uma reconstrução parcial fica incompatível com o frontend atual.
 
 Depois da `011`, os jobs ficam pausados por projeto. Em atualização de uma instalação antiga, aplique primeiro a `011` para pausar os jobs e depois `010`/`012`; em banco novo, aplique os arquivos na ordem numérica. Em ambos os casos, reimplante as Functions antes de ativar os jobs. Não copie JWT, chave secreta ou segredo de cron para `cloud-config.js`, documentação, logs ou navegador.
 
@@ -83,14 +83,14 @@ O passo a passo completo, os testes de saúde e a recuperação estão em [docs/
 - Oito ativos em M5/M15/M30/H1 podem produzir até cerca de **3.648 candles fechados por dia** em mercados contínuos. O banco, não o frontend, é o limite mais provável do plano gratuito.
 - Não existe retenção automática nesta entrega. Candles fechados são imutáveis pelo desenho atual; monitore o tamanho do banco e planeje uma migration de arquivamento antes de se aproximar do limite do plano.
 - Binance, Yahoo Finance, calendário econômico, TradingView e proxies públicos não fornecem SLA ao projeto. A migration `016` reconsulta até seis lacunas exatas por ciclo com backoff, mas não inventa preços: após o limite auditável, a decisão fica terminalmente sem resultado e fora das métricas. As migrations `020`–`023` acrescentam M30, arquivam fotografias completas do calendário e habilitam replay causal; isso não cria calendário histórico anterior à implantação.
-- Hospedagem gratuita não equivale a disponibilidade garantida. Netlify e Supabase podem alterar cotas, políticas de inatividade ou limites de uso.
+- Hospedagem gratuita não equivale a disponibilidade garantida. Vercel, Supabase e provedores de dados podem alterar cotas, políticas de inatividade ou limites de uso.
 
 ## Persistência e recuperação em resumo
 
 - Fechar e reabrir a aba preserva o IndexedDB no mesmo perfil do navegador.
 - Limpar dados do site, usar outro navegador ou outro computador inicia um estado local novo. O painel cloud continua compartilhado se apontar para o mesmo backend.
 - **Exportar CSV** cria uma cópia auditável do histórico visível, não um backup completo do IndexedDB.
-- O frontend pode ser recuperado reenviando esta pasta ou revertendo para um deploy anterior da Netlify.
+- O frontend pode ser recuperado por um novo deploy da branch `main` ou pela reversão para um deploy anterior da Vercel. O arquivo `netlify.toml` permite uma publicação alternativa caso isso seja necessário no futuro.
 - Um projeto Supabase novo pode reconstruir a estrutura aplicando as migrations e refazendo o bootstrap de candles. Sem exportação do banco anterior, decisões prospectivas, resultados e histórico de promoções não podem ser recriados honestamente.
 
 ## Estrutura da entrega
@@ -100,8 +100,8 @@ index.html / styles*.css       frontend estático
 js/                            análise local, Workers, persistência e leitura cloud
 legacy/js/                     interface antiga arquivada, fora do runtime e dos testes
 cloud-config.example.js        modelo sem valores da configuração pública
-netlify.toml                   publicação e cabeçalhos básicos
-vercel.json                   publicação alternativa gratuita na Vercel
+vercel.json                    publicação principal e cabeçalhos na Vercel
+netlify.toml                   alternativa de recuperação, fora do domínio canônico
 supabase/migrations/           banco causal, política única vigente, legado auditável, índices e agendamentos
 supabase/functions/            coleta, bootstrap, treino challenger e replay causal do calendário
 docs/                          operação, recuperação e metodologia estatística
