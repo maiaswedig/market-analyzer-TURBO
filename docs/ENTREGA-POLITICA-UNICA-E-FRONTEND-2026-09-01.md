@@ -46,6 +46,8 @@ Essa simplificação não melhora o motor por si só. Ela elimina a repetição 
 - O `market-cycle` foi implantado na versão 10.
 - O snapshot técnico passou a declarar 27 migrations e a política única como estado vigente.
 - O frontend foi publicado na Vercel no projeto `market-analyzer-ia`, plano Hobby, mantendo o Supabase como backend independente.
+- O projeto Vercel foi conectado ao repositório público `maiaswedig/market-analyzer-TURBO`, branch `main`; o primeiro deploy conectado ficou `Ready` em produção no commit `078f735`.
+- Vercel é o domínio canônico. `canonical`, `og:url`, `robots.txt`, `sitemap.xml` e `llms.txt` apontam para `https://market-analyzer-ia.vercel.app/`; `netlify.toml` permanece apenas como alternativa de recuperação.
 
 ## Validação executada
 

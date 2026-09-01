@@ -1,5 +1,15 @@
 # Status verificado da implantação
 
+## Atualização de 01/09/2026 — Vercel e GitHub
+
+- O endereço público canônico é `https://market-analyzer-ia.vercel.app/`.
+- O projeto Vercel `market-analyzer-ia` está conectado ao repositório público `maiaswedig/market-analyzer-TURBO`, branch `main`.
+- O primeiro deploy conectado ficou `Ready` em produção no commit `078f735`, com duração informada de 2 segundos.
+- Os 161 arquivos publicados no GitHub foram comparados com a entrega local; após normalizar apenas finais de linha Windows/Unix, não houve divergência de conteúdo.
+- `canonical`, `og:url`, `robots.txt`, `sitemap.xml` e `llms.txt` apontam para a Vercel. O `netlify.toml` permanece somente como alternativa de recuperação.
+- A página publicada carregou o sinal canônico do backend, sem seletor de modo, sem campo de custo adicional e sem erro originado pelo site no console verificado.
+- A versão vigente inclui 27 migrations e a política operacional única instalada pela migration `027`.
+
 ## Atualização de 30/08/2026 — projeto de teste
 
 As migrations `020`–`023` foram acrescentadas ao pacote. M30, arquivo
@@ -15,8 +25,8 @@ de teste; produção não foi alterada.
 - O arquivo começa prospectivamente na migration `023`; datas anteriores não
   são reconstruídas.
 - A bateria local desta versão totalizou 101 verificações aprovadas.
-- O frontend v16 foi publicado na Netlify em 31/08/2026 pelo deploy
-  `6a94bb1fb54da3350baa8e7e`.
+- O frontend v16 foi publicado historicamente na Netlify em 31/08/2026 pelo deploy
+  `6a94bb1fb54da3350baa8e7e`; esse registro não representa mais o domínio canônico.
 - O endereço oficial carregou Market Analyzer, M30, scanner progressivo e
   “Nuvem conectada”, sem erros ou avisos no console durante o aceite.
 
@@ -73,8 +83,12 @@ As migrations aplicáveis à versão atual são:
 21. `202608300021_m30_runtime_and_calendar_archive.sql`
 22. `202608300022_calendar_asof_uses_versioned_observation.sql`
 23. `202608300023_calendar_replay_bridge.sql`
+24. `202608310024_public_cloud_grade_history.sql`
+25. `202608310025_public_cloud_decision_explanations.sql`
+26. `202608310026_decouple_confirmed_quality.sql`
+27. `202609010027_single_policy_zero_cost.sql`
 
-As migrations `006`–`009` introduzem separação por modo, ranking prospectivo, índices e visões públicas. A `010` instala `decision_slots`, corrige de forma append-only conflitos históricos, versiona as políticas reais do worker e torna artefatos idempotentes. A `011` remove grants legados e instala cinco projeções sanitizadas. A `012` resolve e revisa modelos usando um corte temporal determinístico. A `013` acrescenta duas visões somente de leitura para métricas por qualidade, totalizando sete endpoints públicos controlados. A `014` cria o ledger privado v2, a decisão independente por EV líquido e a promoção que precisa superar champion e heurística. A `015` adiciona o índice da chave estrangeira indicado pelo advisor de desempenho. A `016` cria a recuperação dirigida de candles ausentes sem modificar decisões imutáveis. A `017` encerra resíduos da fila quando todas as decisões relacionadas já receberam outcome, correção ou abandono. A `018` cancela imediatamente lacunas irmãs sem decisão elegível. A `019` aplica o EV canônico aos novos registros. A `020` adiciona M30 ao tipo cloud. A `021` ativa M30 e o arquivo prospectivo do calendário. A `022` ancora `as-of` na observação versionada. A `023` registra fotografias completas por coleta e disponibiliza replay causal limitado por uma Edge Function protegida.
+As migrations `006`–`009` introduzem separação por modo, ranking prospectivo, índices e visões públicas. A `010` instala `decision_slots`, corrige de forma append-only conflitos históricos, versiona as políticas reais do worker e torna artefatos idempotentes. A `011` remove grants legados e instala cinco projeções sanitizadas. A `012` resolve e revisa modelos usando um corte temporal determinístico. A `013` acrescenta duas visões somente de leitura para métricas por qualidade, totalizando sete endpoints públicos controlados. A `014` cria o ledger privado v2, a decisão independente por EV líquido e a promoção que precisa superar champion e heurística. A `015` adiciona o índice da chave estrangeira indicado pelo advisor de desempenho. A `016` cria a recuperação dirigida de candles ausentes sem modificar decisões imutáveis. A `017` encerra resíduos da fila quando todas as decisões relacionadas já receberam outcome, correção ou abandono. A `018` cancela imediatamente lacunas irmãs sem decisão elegível. A `019` aplica o EV canônico aos novos registros. A `020` adiciona M30 ao tipo cloud. A `021` ativa M30 e o arquivo prospectivo do calendário. A `022` ancora `as-of` na observação versionada. A `023` registra fotografias completas por coleta e disponibiliza replay causal limitado por uma Edge Function protegida. A `024` publica o histórico cloud A/A+, a `025` publica explicações sanitizadas, a `026` separa nota técnica de confirmação prospectiva e a `027` instala a política única com custo adicional zero sem reclassificar o legado.
 
 ## Checklist de segurança antes de reativar o cron
 
