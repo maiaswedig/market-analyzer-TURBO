@@ -16,6 +16,10 @@ select * from public.cloud_system_health limit 0;
 select * from public.cloud_grade_history limit 0;
 select * from public.cloud_decision_explanations limit 0;
 select * from public.cloud_canonical_signals limit 0;
+select * from public.cloud_strategy_lab limit 0;
+select * from public.cloud_single_naive_baselines limit 0;
+select * from public.cloud_single_grade_calibration limit 0;
+select * from public.cloud_grade_a_diagnostics limit 0;
 reset role;
 
 set local role authenticated;
@@ -29,6 +33,10 @@ select * from public.cloud_system_health limit 0;
 select * from public.cloud_grade_history limit 0;
 select * from public.cloud_decision_explanations limit 0;
 select * from public.cloud_canonical_signals limit 0;
+select * from public.cloud_strategy_lab limit 0;
+select * from public.cloud_single_naive_baselines limit 0;
+select * from public.cloud_single_grade_calibration limit 0;
+select * from public.cloud_grade_a_diagnostics limit 0;
 reset role;
 
 do $test$

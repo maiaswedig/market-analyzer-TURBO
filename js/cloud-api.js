@@ -368,7 +368,7 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
   if (!cfg.enabled) {
     return {
       configured: false, status: 'local', fromCache: false, fetchedAt: null, mode: selectedMode,
-      canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], paper: null, health: null, errors: []
+      canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], strategyLab: [], naiveBaselines: [], gradeCalibration: [], paper: null, health: null, errors: []
     };
   }
 
@@ -377,7 +377,7 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
   catch (error) {
     return {
       configured: true, status: 'offline', fromCache: false, fetchedAt: null, mode: selectedMode,
-      canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], paper: null, health: null,
+      canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], strategyLab: [], naiveBaselines: [], gradeCalibration: [], paper: null, health: null,
       errors: [error && error.message || 'Configuração inválida.']
     };
   }
@@ -392,6 +392,9 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
     ['qualityMetrics', 'cloud_quality_segment_metrics', { select: '*', mode: `eq.${selectedMode}`, limit: 750 }],
     ['paper', 'cloud_single_paper_summary', { select: '*', limit: 1 }],
     ['qualityPaper', 'cloud_single_quality_paper_summary', { select: '*', order: 'quality.asc', limit: 3 }],
+    ['strategyLab', 'cloud_strategy_lab', { select: '*', order: 'arm.asc', limit: 10 }],
+    ['naiveBaselines', 'cloud_single_naive_baselines', { select: '*', order: 'strategy.asc', limit: 10 }],
+    ['gradeCalibration', 'cloud_single_grade_calibration', { select: '*', limit: 5 }],
     ['health', 'cloud_system_health', { select: '*', limit: 1 }]
   ];
   const settled = await Promise.allSettled(calls.map(([, view, params]) => request(endpoint(base, view, params), cfg.publishableKey, timeoutMs)));
@@ -411,7 +414,7 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
     }
     return {
       configured: true, status: 'offline', fromCache: false, fetchedAt: null, mode: selectedMode,
-      canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], paper: null, health: null, errors
+      canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], strategyLab: [], naiveBaselines: [], gradeCalibration: [], paper: null, health: null, errors
     };
   }
 
@@ -434,6 +437,9 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
   const qualityMetrics = rows(payload.qualityMetrics).map(normalizeMetric);
   const paper = normalizePaper(rows(payload.paper)[0]);
   const qualityPaper = rows(payload.qualityPaper).map(normalizePaper);
+  const strategyLab = rows(payload.strategyLab);
+  const naiveBaselines = rows(payload.naiveBaselines);
+  const gradeCalibration = rows(payload.gradeCalibration);
   const health = normalizeHealth(rows(payload.health)[0]);
   const snapshot = {
     configured: true,
@@ -448,6 +454,9 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
     metrics,
     qualityMetrics,
     qualityPaper,
+    strategyLab,
+    naiveBaselines,
+    gradeCalibration,
     paper,
     health,
     errors

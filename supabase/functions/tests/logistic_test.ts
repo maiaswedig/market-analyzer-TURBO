@@ -13,5 +13,8 @@ Deno.test("challenger exige 300 validações e supera baseline com margem paread
   const result = trainChronological(samples, { minValidation: 300, epochs: 80, zMargin: 1.5, tieRate: 0.01 });
   assert(result.ok && !!result.artifact, result.reason || "artefato ausente");
   assert(result.artifact.validationSamples >= 300, "holdout menor que 300");
+  const walkForward = result.artifact.metrics.walkForward as { passed?: boolean; windows?: Array<{ validationSamples?: number }> };
+  assert(walkForward?.passed === true && walkForward.windows?.length === 3, "walk-forward de três janelas não passou");
+  assert(walkForward.windows.every(window => Number(window.validationSamples) >= 200), "janela walk-forward pequena demais");
   assert(result.artifact.usable, "sinal sintético forte deveria passar nos gates");
 });

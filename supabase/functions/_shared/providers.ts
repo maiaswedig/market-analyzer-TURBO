@@ -330,7 +330,11 @@ export async function fetchGapWindow(
     };
     if (validCandle(candle)) rows.push(candle);
   }
-  return deduplicate(rows.filter((row) => row.isClosed));
+  // Recovery is for one exact key. Sending neighboring Yahoo candles can
+  // collide with immutable bars that the provider revised after publication
+  // and would reject the whole transaction, including the genuinely missing
+  // target. Never overwrite those neighbors and never substitute another bar.
+  return deduplicate(rows.filter((row) => row.isClosed && row.openTime === targetOpen));
 }
 
 function deduplicate(candles: Candle[]): Candle[] {

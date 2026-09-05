@@ -233,6 +233,24 @@
           <div class="cloud-quality-card is-empty"><span>Avaliação baixa</span><b>Sem amostra</b><small>Aguardando registros resolvidos</small></div>
         </div>
       </div>
+      <div class="cloud-quality-block" aria-labelledby="strategyLabTitle">
+        <div class="cloud-quality-heading">
+          <h3 id="strategyLabTitle">Laboratório prospectivo de estratégia</h3>
+          <p>Compara a direção atual, a oposta, o filtro A/A+, sempre compra, sempre vende e o último candle — somente em sinais novos congelados antes da entrada. É diagnóstico: nenhuma alternativa muda o sinal ou assume o controle automaticamente.</p>
+        </div>
+        <div id="cloudStrategyLab" class="cloud-quality-grid" aria-live="polite">
+          <div class="cloud-quality-card is-empty"><span>Coleta iniciada</span><b>Sem amostra</b><small>Revisão somente após 500 oportunidades em 20 dias</small></div>
+        </div>
+      </div>
+      <div class="cloud-quality-block" aria-labelledby="statisticalDiagnosticsTitle">
+        <div class="cloud-quality-heading">
+          <h3 id="statisticalDiagnosticsTitle">Diagnóstico estatístico · sem ajuste de pesos</h3>
+          <p>Compara o motor com regras ingênuas na mesma amostra resolvida e mostra a incerteza de cada nota. Estes números servem para investigar a estratégia; não mudam sinais nem treinam o modelo.</p>
+        </div>
+        <div class="table-wrap cloud-table-wrap"><table class="responsive-table cloud-opportunities-table"><caption>Comparação retrospectiva com regras ingênuas na mesma amostra da política única</caption><thead><tr><th scope="col">Referência</th><th scope="col">Cobertura</th><th scope="col">Taxa</th><th scope="col">EV por oportunidade</th><th scope="col">Leitura</th></tr></thead><tbody id="cloudNaiveBaselineRows"><tr><td colspan="5" class="empty-row empty-awaiting">Aguardando diagnóstico da nuvem.</td></tr></tbody></table></div>
+        <div class="table-wrap cloud-table-wrap"><table class="responsive-table cloud-opportunities-table"><caption>Taxa observada por nota com intervalo de Wilson de 95%</caption><thead><tr><th scope="col">Nota</th><th scope="col">Amostra</th><th scope="col">Taxa observada</th><th scope="col">Intervalo 95%</th><th scope="col">EV por sinal</th></tr></thead><tbody id="cloudGradeCalibrationRows"><tr><td colspan="5" class="empty-row empty-awaiting">Aguardando calibração por nota.</td></tr></tbody></table></div>
+        <p id="cloudDiagnosticNotice" class="cloud-separation-note" role="status">Os resultados são retrospectivos e não comprovam vantagem futura.</p>
+      </div>
       <div class="table-wrap cloud-table-wrap"><table id="cloudOpportunitiesTable" class="responsive-table cloud-opportunities-table"><caption>Oportunidades prospectivas da política única do monitoramento 24/7, mantidas separadas dos sinais e estatísticas locais</caption><thead><tr><th scope="col">Ativo</th><th scope="col">Tempo</th><th scope="col">Sinal / qualidade</th><th scope="col">Força</th><th scope="col">Taxa real / amostra</th><th scope="col">EV simulado</th><th scope="col">Critérios / atualização</th></tr></thead><tbody id="cloudOpportunityRows"><tr><td colspan="7" class="empty-row empty-awaiting">Aguardando configuração opcional da nuvem. A leitura local continua funcionando normalmente.</td></tr></tbody></table></div>
       <div class="cloud-grade-history" aria-labelledby="cloudGradeHistoryTitle">
         <div class="cloud-quality-heading"><h3 id="cloudGradeHistoryTitle">Histórico cloud A/A+ · paper trading</h3><p>Mostra todo A e A+ congelado antes da entrada, inclusive com avaliação baixa. A nota resume a força técnica; a qualidade informa a validação estatística. Esta amostra é somente visual e não alimenta o ranking local.</p></div>

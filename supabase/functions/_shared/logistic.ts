@@ -67,6 +67,110 @@ function metrics(rows: number[][], labels: number[], weights: number[], bias: nu
   };
 }
 
+function fitWindow(train: TrainingSample[], validation: TrainingSample[], options: TrainingOptions) {
+  const width = train[0].vector.length;
+  const { mean, std } = moments(train.map((sample) => sample.vector));
+  const trainRows = train.map((sample) => standardize(sample.vector, mean, std));
+  const validationRows = validation.map((sample) => standardize(sample.vector, mean, std));
+  const trainLabels = train.map((sample) => sample.label);
+  const validationLabels = validation.map((sample) => sample.label);
+  const weights = new Array<number>(width).fill(0);
+  let bias = 0;
+  const epochs = Math.max(20, Math.min(160, Math.round(options.epochs || 80)));
+  const learningRate = Math.max(0.005, Math.min(0.5, Number(options.learningRate ?? 0.08)));
+  const l2 = Math.max(0, Math.min(0.1, Number(options.l2 ?? 0.006)));
+  for (let epoch = 0; epoch < epochs; epoch++) {
+    const gradient = new Array<number>(width).fill(0);
+    let biasGradient = 0;
+    for (let rowIndex = 0; rowIndex < trainRows.length; rowIndex++) {
+      const predicted = probability(trainRows[rowIndex], weights, bias);
+      const error = predicted - trainLabels[rowIndex];
+      for (let column = 0; column < width; column++) gradient[column] += error * trainRows[rowIndex][column];
+      biasGradient += error;
+    }
+    for (let column = 0; column < width; column++) {
+      weights[column] -= learningRate * (gradient[column] / trainRows.length + l2 * weights[column]);
+    }
+    bias -= learningRate * biasGradient / trainRows.length;
+  }
+  return {
+    mean, std, weights, bias,
+    trainRows, validationRows, trainLabels, validationLabels,
+    trainMetrics: metrics(trainRows, trainLabels, weights, bias),
+    validationMetrics: metrics(validationRows, validationLabels, weights, bias),
+  };
+}
+
+function evaluateWalkForward(samples: TrainingSample[], options: TrainingOptions) {
+  const windowCount = 3;
+  const minValidation = Math.max(300, Math.round(options.minValidation || 300));
+  const windowSamples = Math.max(200, Math.ceil(minValidation * 2 / 3));
+  const initialTrain = samples.length - windowCount * windowSamples - 1;
+  if (initialTrain < 400) {
+    return {
+      passed: false,
+      reason: `amostras insuficientes para 3 janelas: treino inicial ${Math.max(0, initialTrain)}/400`,
+      windowSamples,
+      windows: [],
+    };
+  }
+  const payout = 0.85;
+  const operationCost = 0;
+  const tieRate = Math.max(0, Math.min(1, Number(options.tieRate) || 0));
+  const windows = [];
+  for (let index = 0; index < windowCount; index++) {
+    const validationStart = samples.length - (windowCount - index) * windowSamples;
+    const validationEnd = validationStart + windowSamples;
+    // One purged observation prevents the last E1 training target from sharing
+    // the first validation feature candle.
+    const train = samples.slice(0, Math.max(0, validationStart - 1));
+    const validation = samples.slice(validationStart, validationEnd);
+    const fitted = fitWindow(train, validation, options);
+    let pnl = 0;
+    let trades = 0;
+    let wins = 0;
+    for (let row = 0; row < validation.length; row++) {
+      const up = fitted.validationMetrics.predictions[row];
+      const direction = up >= 0.5 ? 1 : 0;
+      const directionalProbability = direction === 1 ? up : 1 - up;
+      const winProbability = directionalProbability * (1 - tieRate);
+      const expectedEv = winProbability * payout - (1 - winProbability) - operationCost;
+      if (expectedEv <= 0) continue;
+      trades++;
+      const won = validation[row].label === direction;
+      if (won) wins++;
+      pnl += won ? payout - operationCost : -1 - operationCost;
+    }
+    const minimumTrades = Math.max(50, Math.ceil(validation.length * 0.10));
+    windows.push({
+      index: index + 1,
+      trainFrom: new Date(train[0].at).toISOString(),
+      trainTo: new Date(train.at(-1)!.at).toISOString(),
+      validationFrom: new Date(validation[0].at).toISOString(),
+      validationTo: new Date(validation.at(-1)!.at).toISOString(),
+      trainSamples: train.length,
+      validationSamples: validation.length,
+      trades,
+      minimumTrades,
+      coverage: trades / validation.length,
+      wins,
+      winRate: trades ? wins / trades : null,
+      evPerOpportunity: pnl / validation.length,
+      evPerTrade: trades ? pnl / trades : null,
+      passed: trades >= minimumTrades && pnl / validation.length >= 0,
+    });
+  }
+  return {
+    passed: windows.length === windowCount && windows.every((window) => window.passed),
+    reason: "requires non-negative EV/opportunity and minimum coverage in all 3 expanding walk-forward windows",
+    windowSamples,
+    payout,
+    operationCost,
+    tieRate,
+    windows,
+  };
+}
+
 export function trainChronological(rawSamples: TrainingSample[], options: TrainingOptions = {}): TrainingResult {
   const samples = rawSamples
     .filter((sample) => sample && (sample.label === 0 || sample.label === 1) && sample.vector.length > 0 && sample.vector.every(Number.isFinite))
@@ -89,34 +193,8 @@ export function trainChronological(rawSamples: TrainingSample[], options: Traini
   const validation = samples.slice(split);
   if (train.length < 400 || validation.length < minValidation) return { ok: false, reason: "divisão cronológica deixou uma das janelas pequena demais" };
 
-  const { mean, std } = moments(train.map((sample) => sample.vector));
-  const trainRows = train.map((sample) => standardize(sample.vector, mean, std));
-  const validationRows = validation.map((sample) => standardize(sample.vector, mean, std));
-  const trainLabels = train.map((sample) => sample.label);
-  const validationLabels = validation.map((sample) => sample.label);
-  const weights = new Array<number>(width).fill(0);
-  let bias = 0;
-  const epochs = Math.max(20, Math.min(160, Math.round(options.epochs || 80)));
-  const learningRate = Math.max(0.005, Math.min(0.5, Number(options.learningRate ?? 0.08)));
-  const l2 = Math.max(0, Math.min(0.1, Number(options.l2 ?? 0.006)));
-
-  for (let epoch = 0; epoch < epochs; epoch++) {
-    const gradient = new Array<number>(width).fill(0);
-    let biasGradient = 0;
-    for (let rowIndex = 0; rowIndex < trainRows.length; rowIndex++) {
-      const predicted = probability(trainRows[rowIndex], weights, bias);
-      const error = predicted - trainLabels[rowIndex];
-      for (let column = 0; column < width; column++) gradient[column] += error * trainRows[rowIndex][column];
-      biasGradient += error;
-    }
-    for (let column = 0; column < width; column++) {
-      weights[column] -= learningRate * (gradient[column] / trainRows.length + l2 * weights[column]);
-    }
-    bias -= learningRate * biasGradient / trainRows.length;
-  }
-
-  const trainMetrics = metrics(trainRows, trainLabels, weights, bias);
-  const validationMetrics = metrics(validationRows, validationLabels, weights, bias);
+  const fitted = fitWindow(train, validation, options);
+  const { mean, std, weights, bias, trainLabels, validationLabels, trainMetrics, validationMetrics } = fitted;
   const baselineProbability = trainLabels.reduce((sum, label) => sum + label, 0) / trainLabels.length;
   const differences: number[] = [];
   let baselineBrier = 0;
@@ -137,10 +215,12 @@ export function trainChronological(rawSamples: TrainingSample[], options: Traini
   const improvement = -meanDifference;
   const requiredImprovement = zMargin * standardError;
   const overfitGap = Number(trainMetrics.accuracy || 0) - Number(validationMetrics.accuracy || 0);
+  const walkForward = evaluateWalkForward(samples, options);
   const gates = [
     { ok: validation.length >= minValidation, name: "validation-size", detail: `${validation.length} >= ${minValidation}` },
     { ok: improvement > requiredImprovement, name: "paired-brier", detail: `ganho ${improvement.toFixed(6)} > ${zMargin.toFixed(2)}*SE ${requiredImprovement.toFixed(6)}` },
     { ok: overfitGap <= 0.08, name: "overfit-gap", detail: `diferença treino-validação ${overfitGap.toFixed(4)} <= 0.0800` },
+    { ok: walkForward.passed, name: "walk-forward-3-windows", detail: walkForward.reason },
   ];
   const usable = gates.every((gate) => gate.ok);
   const artifact: LogisticArtifact = {
@@ -170,6 +250,7 @@ export function trainChronological(rawSamples: TrainingSample[], options: Traini
       requiredImprovement,
       zMargin,
       overfitGap,
+      walkForward,
       gates,
     },
     usable,

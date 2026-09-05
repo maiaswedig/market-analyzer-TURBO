@@ -79,7 +79,7 @@ Deno.serve((request) => handleFunction(request, async () => {
     feature_schema_version: artifact.featureSchemaVersion,
     validation_policy_version: artifact.validationPolicyVersion,
     engine_policy_version: ENGINE_POLICY_VERSION,
-    policy_signature: policySignature({ minValidation, zMargin: 1.5, horizon: "E1", closedCandlesOnly: true }),
+    policy_signature: policySignature({ minValidation, zMargin: 1.5, horizon: "E1", closedCandlesOnly: true, walkForwardWindows: 3 }),
     trained_at: artifact.trainedAt,
     train_from: artifact.trainFrom,
     train_to: artifact.trainTo,
@@ -114,6 +114,7 @@ Deno.serve((request) => handleFunction(request, async () => {
     tieRate,
     candidateUsable: artifact.usable,
     validation: artifact.metrics,
+    walkForward: artifact.metrics.walkForward,
     created,
     review,
   };

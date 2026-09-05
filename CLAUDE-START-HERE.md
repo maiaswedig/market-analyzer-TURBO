@@ -1,14 +1,14 @@
 # Market Analyzer — início da revisão técnica
 
-Data de corte do pacote: 01/09/2026.
+Data de corte do pacote: 05/09/2026.
 
 Aplicação: `https://market-analyzer-ia.vercel.app/`
 
 Repositório: `https://github.com/maiaswedig/market-analyzer-TURBO`
 
-Comece por `PERPLEXITY-REVIEW.md`, que é gerado a partir de `docs/technical-review-runtime-snapshot.json` e validado pelo teste `test:technical-review`. Depois leia `docs/ENTREGA-POLITICA-UNICA-E-FRONTEND-2026-09-01.md` e `docs/ENTREGA-GITHUB-VERCEL-2026-09-01.md`.
+Comece por `docs/CLAUDE-REVIEW-ESTRATEGIA-DIAGNOSTICA-2026-09-05.md`. Depois leia `PERPLEXITY-REVIEW.md`, gerado a partir de `docs/technical-review-runtime-snapshot.json` e validado pelo teste `test:technical-review`.
 
-O pacote contém o frontend, o motor local, as Edge Functions, 27 migrations, contratos SQL e verificadores. Não contém `.env`, `node_modules`, `.git` da origem nem segredos administrativos.
+O pacote contém o frontend, o motor local, as Edge Functions, 32 migrations, contratos SQL e verificadores. Não contém `.env`, `node_modules`, `.git` da origem nem segredos administrativos.
 
 ## Estado que deve ser preservado
 
@@ -19,6 +19,8 @@ O pacote contém o frontend, o motor local, as Edge Functions, 27 migrations, co
 - `confirmed` exige promoção prospectiva real e os gates da migration `026`; a migration `027` não pode enfraquecer essa regra.
 - Direções de baixa qualidade continuam visíveis, com os motivos; não são transformadas artificialmente em confirmação.
 - Backtest, histórico local e ledger cloud permanecem separados.
+- As migrations `029`–`032` são diagnóstico e shadow: não promovem estratégia, não reajustam pesos e não reclassificam histórico.
+- Um braço seletivo é comparado a um acaso com a mesma cobertura; WAIT é comparado com WAIT.
 
 ## Ordem sugerida da auditoria
 
@@ -30,9 +32,11 @@ O pacote contém o frontend, o motor local, as Edge Functions, 27 migrations, co
 6. `supabase/migrations/202608310024_public_cloud_grade_history.sql` e `202608310025_public_cloud_decision_explanations.sql`: projeções públicas sanitizadas.
 7. `supabase/migrations/202608310026_decouple_confirmed_quality.sql`: confirmação separada de nota e ligada à promoção real.
 8. `supabase/migrations/202609010027_single_policy_zero_cost.sql`: política única, custo adicional zero e preservação do legado.
-9. `supabase/functions/market-cycle/index.ts`, `train-challenger/index.ts` e `_shared/`: coleta, decisão, treino e resolução.
-10. `js/score.js`, `decision.js`, `probability.js`, `backtest.js`, `history-settlement.js` e `signal-ai.js`: motor local e apresentação.
-11. `supabase/tests/` e `tools/verify-*.mjs`: contratos permanentes contra regressão.
+9. `supabase/migrations/202609040028_fix_gap_batch_reconciliation.sql`: concorrência e relógios da fila de lacunas.
+10. `supabase/migrations/202609040029_prospective_strategy_lab.sql` até `202609050032_coverage_matched_strategy_benchmark.sql`: controles prospectivos, baselines, Wilson, regime e benchmark justo.
+11. `supabase/functions/market-cycle/index.ts`, `train-challenger/index.ts` e `_shared/`: coleta, decisão, regime e treino walk-forward.
+12. `js/cloud-api.js` e `js/signal-ai.js`: apresentação dos diagnósticos, sem realimentação do motor.
+13. `supabase/tests/` e `tools/verify-*.mjs`: contratos permanentes contra regressão.
 
 ## Perguntas objetivas para o revisor
 
@@ -45,6 +49,11 @@ O pacote contém o frontend, o motor local, as Edge Functions, 27 migrations, co
 - A migration `027` mistura o legado dos três modos com a curva prospectiva da política única?
 - O frontend troca a fotografia congelada do ranking ao abrir uma análise?
 - O repositório ou os artefatos públicos expõem segredo real?
+- O regime é calculado somente com candles disponíveis no instante da decisão e congelado no ledger?
+- As três janelas walk-forward são cronológicas, purgadas e ficam todas fora do treino de sua própria janela?
+- Algum diagnóstico retrospectivo altera pesos, sinais, modelos ou promoção?
+- O braço A/A+ usa um benchmark aleatório restrito às mesmas entradas, impedindo vantagem artificial por WAIT?
+- A inversão A versus D permanece quando segmentada por ativo, timeframe, direção, regime e período?
 
 ## Interpretação estatística obrigatória
 

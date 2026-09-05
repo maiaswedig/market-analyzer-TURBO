@@ -1,6 +1,7 @@
 import {
   buildDecisionAssessment,
   buildFeatureRows,
+  classifyMarketRegime,
   directionalEconomics,
   FEATURE_NAMES,
   gradeDecisionAssessment,
@@ -42,7 +43,17 @@ Deno.test("feature antiga não muda quando candles futuros são anexados", () =>
   const sameTime = after.find((row) => row.openTime === target.openTime);
   assert(!!sameTime, "snapshot causal desapareceu");
   assert(JSON.stringify(sameTime.vector) === JSON.stringify(target.vector), "candle futuro alterou feature passada");
+  assert(sameTime.regime === target.regime, "candle futuro alterou regime passado");
+  assert(JSON.stringify(sameTime.regimeInputs) === JSON.stringify(target.regimeInputs), "candle futuro alterou insumos causais do regime");
   assert(target.vector.length === FEATURE_NAMES.length, "schema e vetor divergiram");
+});
+
+Deno.test("classificador de regime separa tendência, volatilidade e consolidação", () => {
+  assert(classifyMarketRegime({ emaAlignment: 3, adxLike: 0.70, atrPercentile: 60, bbBandwidth: 0.03, bbBwPercentile: 50, structureDir: 2 }) === "tendência forte de alta", "tendência forte de alta não reconhecida");
+  assert(classifyMarketRegime({ emaAlignment: -3, adxLike: 0.70, atrPercentile: 60, bbBandwidth: 0.03, bbBwPercentile: 50, structureDir: -2 }) === "tendência forte de baixa", "tendência forte de baixa não reconhecida");
+  assert(classifyMarketRegime({ emaAlignment: 0, adxLike: 0.10, atrPercentile: 40, bbBandwidth: 0.02, bbBwPercentile: 50, structureDir: 0 }) === "consolidação", "consolidação não reconhecida");
+  assert(classifyMarketRegime({ emaAlignment: 0, adxLike: 0.10, atrPercentile: 95, bbBandwidth: 0.08, bbBwPercentile: 80, structureDir: 0 }) === "alta volatilidade", "alta volatilidade não teve prioridade");
+  assert(classifyMarketRegime({ emaAlignment: 3, adxLike: 0.70, atrPercentile: 50, bbBandwidth: 0.005, bbBwPercentile: 5, structureDir: 2 }) === "baixa volatilidade (squeeze)", "squeeze não teve prioridade");
 });
 
 Deno.test("política independente compra, vende ou aguarda pelo EV líquido", () => {

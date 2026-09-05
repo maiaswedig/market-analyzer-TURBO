@@ -2,7 +2,7 @@
 
 Este guia separa três coisas que podem parecer iguais na tela, mas têm responsabilidades diferentes:
 
-1. **Site estático na Netlify:** mantém o link acessível.
+1. **Site estático na Vercel:** mantém o link principal acessível; a configuração Netlify é apenas uma alternativa de recuperação.
 2. **Motor local:** analisa, treina e guarda dados no navegador enquanto a página está aberta.
 3. **Monitoramento Supabase:** coleta e mede sinais prospectivos com a página fechada, desde que funções e agendamentos estejam saudáveis.
 
@@ -10,13 +10,13 @@ O link continuar online não prova que o scanner cloud está funcionando. Confir
 
 ## 1. Publicação do frontend
 
-1. Mantenha `index.html`, os arquivos CSS, `js/`, `favicon.svg`, `netlify.toml` e a configuração pública cloud na mesma estrutura.
-2. Na Netlify, escolha um site estático e publique a raiz desta pasta. O comando de build deve ficar vazio e o diretório publicado é `.`.
-3. Aguarde o deploy terminar e abra o endereço `*.netlify.app` em uma janela anônima para confirmar que os módulos, fontes e gráficos carregam sem depender do seu computador.
+1. Mantenha `index.html`, os arquivos CSS, `js/`, `favicon.svg`, `vercel.json` e a configuração pública cloud na mesma estrutura.
+2. O projeto Vercel `market-analyzer-ia` acompanha a branch `main` do repositório `maiaswedig/market-analyzer-TURBO`; um push nessa branch inicia o deploy estático da raiz, sem comando de build.
+3. Aguarde o deploy de produção terminar e abra `https://market-analyzer-ia.vercel.app/` em uma janela anônima para confirmar que os módulos, fontes e gráficos carregam sem depender do seu computador.
 4. Em uma publicação somente local, deixe a configuração cloud vazia. A interface exibirá **Modo local** e continuará funcionando.
 5. Para conectar a nuvem, use a estrutura de `cloud-config.example.js` e informe somente a URL do projeto e a chave pública/publicável. Chaves administrativas, service role, JWT de agendamento e credenciais de banco nunca pertencem ao frontend.
 
-Um deploy da Netlify é uma fotografia dos arquivos. Mudanças locais só chegam ao link depois de um novo deploy.
+Um deploy da Vercel é uma fotografia do commit. Mudanças locais só chegam ao link depois de commit, push e conclusão do novo deploy de produção.
 
 ## 2. Ativação do backend Supabase
 
@@ -25,16 +25,16 @@ Use um projeto Supabase separado para produção e siga esta ordem:
 1. Gere fora do repositório um segredo aleatório independente com pelo menos 32 caracteres.
 2. Configure-o no ambiente das Edge Functions como `SIGNAL_ATLAS_CRON_SECRET` e salve o mesmo valor no Vault como `signal_atlas_cron_secret`. Não imprima nem copie o valor para arquivos publicados.
 3. Confirme no Vault `signal_atlas_project_url` e `signal_atlas_cron_jwt`; use o JWT público com claim superior `anon`, conforme o padrão oficial de agendamento, e não coloque `service_role` no Vault. O segredo de cron não pode ser igual ao JWT.
-4. Em banco novo, aplique todas as migrations `001`–`019` na ordem numérica. Em projeto antigo já agendado, aplique primeiro a `011` para pausar os jobs, depois as migrations ainda ausentes, e só reative após o deploy das Functions.
-5. Implante `bootstrap-data`, `market-cycle` e `train-challenger`; o `supabase/config.toml` versionado mantém `verify_jwt=true` nas três.
+4. Em banco novo, aplique todas as migrations `001`–`032` na ordem numérica. Em projeto antigo já agendado, aplique primeiro a `011` para pausar os jobs, depois as migrations ainda ausentes, e só reative após o deploy das Functions.
+5. Implante `bootstrap-data`, `market-cycle`, `train-challenger` e `calendar-replay`; o `supabase/config.toml` versionado mantém a autenticação exigida para cada função.
 6. Execute `bootstrap-data` manualmente em lotes controlados, enviando um Bearer JWT aceito pelo gateway (`anon` é suficiente) e `X-Signal-Atlas-Cron-Secret`. Ele importa somente candles fechados e é idempotente; o JWT público sem o segundo segredo deve receber 403.
 7. Execute `supabase/tests/security_contract.sql`, `supabase/tests/causality_contract.sql`, `supabase/tests/gap_backfill_contract.sql` e `supabase/tests/economic_contract.sql`. As sete `cloud_*` devem abrir sob `anon` e `authenticated`; todas as tabelas privadas e APIs legadas devem ser negadas.
 8. Como `postgres`, execute `select * from signal_atlas.activate_schedules();` e confirme que `signal-atlas-market-cycle` roda a cada minuto e `signal-atlas-train-challenger` no minuto 7 de cada hora.
 9. Só então conecte o frontend às visões públicas cloud.
 
-Ativos iniciais: `BTCUSDT`, `ETHUSDT`, `BNBUSDT`, `SOLUSDT`, `EURUSD=X`, `GBPUSD=X`, `USDJPY=X` e `AUDUSD=X`, em M5, M15 e H1. Cripto usa Binance; Forex usa Yahoo Finance.
+Ativos iniciais: `BTCUSDT`, `ETHUSDT`, `BNBUSDT`, `SOLUSDT`, `EURUSD=X`, `GBPUSD=X`, `USDJPY=X` e `AUDUSD=X`, em M5, M15, M30 e H1. Cripto usa Binance com fallback real; Forex usa Yahoo Finance.
 
-As migrations `006` a `009` completam métricas/ranking por modo, índices e visões de saúde. A `010` cria o slot causal único, políticas reais versionadas e idempotência de artefatos. A `011` declara extensões, remove grants legados e instala ativação explícita pós-deploy. A `012` torna resolução e revisão determinísticas pelo corte temporal. A `013` adiciona as curvas por qualidade sem reescrever o ledger. As migrations `014`–`017` instalam o laboratório independente e o backfill de lacunas; `018` encerra lacunas irmãs órfãs e `019` unifica a política econômica de empate somente para novos registros. Não pule nenhuma delas ao reconstruir o backend.
+As migrations `006` a `019` completam métricas, causalidade, segurança, backfill de lacunas e economia canônica. `020` adiciona M30; `021`–`023` arquivam e reproduzem calendário econômico sem conhecimento futuro; `024`–`027` consolidam a nota técnica, a confirmação estatística e a política operacional única. `028` corrige a reconciliação concorrente de lacunas. `029`–`030` criam o laboratório prospectivo de estratégias sem alterar o motor em produção. `031` persiste o regime causal e publica diagnósticos de baseline e nota com Wilson. `032` compara estratégias seletivas contra um benchmark aleatório com a mesma cobertura. Não pule nenhuma delas ao reconstruir o backend.
 
 ## 3. Teste de aceite após publicar
 
@@ -57,7 +57,7 @@ As migrations `006` a `009` completam métricas/ranking por modo, índices e vis
 - Confirmado, técnico e baixo aparecem em curvas separadas; classe sem amostra mostra “Sem amostra”, nunca 0%.
 - A política operacional é única. Os modos antigos continuam disponíveis apenas no ledger histórico, sem serem misturados à curva vigente.
 - A taxa de acerto aparece junto do benchmark aleatório de 50% e do EV desse benchmark sob o mesmo payout e custo adicional zero da política vigente.
-- Com a página fechada por alguns minutos, a última coleta continua avançando. Se não avançar, o problema está no backend/agendamento, não na Netlify.
+- Com a página fechada por alguns minutos, a última coleta continua avançando. Se não avançar, o problema está no backend/agendamento, não na Vercel.
 
 ### Estado verificado em 27/08/2026
 
@@ -105,10 +105,10 @@ Os números mudam com novos candles. Consulte [STATUS-IMPLANTACAO.md](STATUS-IMP
 ### Na nuvem
 
 - O ciclo por minuto coleta apenas janelas necessárias, mantém a vela live separada e registra a decisão antes da entrada.
-- O treino horário escolhe um escopo por vez e usa apenas candles fechados. Com 8 ativos e 3 timeframes, uma rotação completa leva aproximadamente 24 horas.
+- O treino horário escolhe um escopo por vez e usa apenas candles fechados. Com 8 ativos e 4 timeframes, uma rotação completa leva aproximadamente 32 horas.
 - O rótulo atual é E1: abertura da próxima vela contra o fechamento dessa mesma vela.
-- Existe um baseline por cada um dos 24 escopos iniciais. O primeiro modelo com pelo menos 300 observações de validação pode iniciar a medição, mas só recebe tratamento forte quando demonstra melhoria pelos gates offline; caso contrário, seus sinais ficam baixos durante a calibração prospectiva.
-- Um challenger aprovado offline só observa em shadow. A promoção exige 300 resultados futuros comuns ao challenger e ao champion, melhora de EV com limite inferior de 95% positivo, Brier não pior e drawdown de no máximo 1,20×.
+- Existe um baseline por cada um dos 32 escopos iniciais. O modelo precisa passar validação cronológica e três janelas walk-forward; falhar em qualquer janela impede que seja considerado utilizável.
+- Um challenger aprovado offline só observa em shadow. A promoção exige pelo menos 500 resultados futuros pareados e 20 dias, melhora de EV com limite inferior de 95% positivo, Brier não pior e drawdown controlado.
 - Decisões, previsões, outcomes e promoções são registros imutáveis. Uma correção adiciona um evento separado; não apaga o passado.
 - A política cloud vigente simula stake unitário, payout de 0,85, custo adicional zero e empate como perda. As políticas antigas com custo de 0,02 permanecem preservadas no ledger e não são reescritas.
 - Métricas, oportunidades e curva paper vigentes usam somente a política única. A referência aleatória de 50% usa o mesmo payout e custo adicional zero, permitindo comparar também o EV — não apenas a porcentagem de acerto.
@@ -123,7 +123,7 @@ Estimativa da configuração padrão, sem chamadas manuais ou repetições:
 | --- | ---: |
 | Ciclo a cada minuto | ~43.200 invocações/mês |
 | Treino uma vez por hora | ~720 invocações/mês |
-| Candles máximos por dia, 8 ativos × M5/M15/H1 | ~3.264 |
+| Candles máximos por dia, 8 ativos × M5/M15/M30/H1 | ~3.648 |
 
 Em agosto de 2026, a documentação do Supabase informava 500 MB de banco no plano gratuito, 500.000 invocações de Edge Functions por mês, até 2 segundos de CPU e 150 segundos de duração por requisição. Verifique a documentação atual antes de dimensionar: cotas podem mudar sem alteração neste repositório. Referências oficiais: [faturamento e cotas](https://supabase.com/docs/guides/platform/billing-on-supabase), [limites das Edge Functions](https://supabase.com/docs/guides/functions/limits) e [Cron](https://supabase.com/docs/guides/cron).
 
@@ -133,13 +133,13 @@ Pontos de atenção:
 - Candles fechados são imutáveis no ledger atual. Não tente “limpar” o banco manualmente; uma futura retenção precisa arquivar dados de forma auditável e preservar decisões, outcomes e linhagem.
 - Treinos com 3.500 candles podem exceder CPU em momentos de carga. A função limita um escopo por hora justamente para reduzir esse risco.
 - Yahoo Finance e Binance podem limitar ou alterar o serviço. O plano gratuito não oferece garantia 24/7 de terceiros.
-- A Netlify serve o frontend estático; seu limite de banda/deploy é independente do Supabase.
+- A Vercel serve o frontend estático; seu limite de banda/deploy é independente do Supabase.
 
 ## 7. Recuperação
 
 ### Site indisponível, backend saudável
 
-1. Abra o histórico de deploys da Netlify e restaure o último deploy conhecido como estável, ou publique novamente uma cópia íntegra desta pasta.
+1. Abra o histórico de deploys da Vercel e promova o último deploy conhecido como estável. Se a Vercel estiver indisponível, o `netlify.toml` preservado permite publicar a mesma raiz como espelho temporário.
 2. Abra o site em janela anônima.
 3. Confirme o selo cloud e a última coleta. Reverter o frontend não altera o ledger do Supabase.
 
@@ -170,13 +170,13 @@ Se não houver backup do banco, `bootstrap-data` pode repor parte dos candles p�
 
 ## 8. Segurança e privacidade
 
-- O frontend usa somente configuração pública para consultar sete visões cloud de leitura.
+- O frontend usa somente configuração pública para consultar visões cloud explicitamente liberadas para leitura.
 - Pesos completos, tabelas privadas, credenciais administrativas e dados de serviço não são expostos nessas visões.
 - RPCs de escrita são usados internamente pelo cliente administrativo das Edge Functions. A borda exige POST, JWT validado pelo gateway com papel `anon` ou `service_role`, recusa sessões `authenticated` e sempre exige o segredo independente de cron. O padrão operacional usa `anon`, sem guardar `service_role` no Vault.
-- `anon` e `authenticated` não recebem `SELECT` nas tabelas privadas. As sete visões `cloud_*` chamam projeções privadas, sem parâmetros, com colunas explícitas e `search_path` fixo.
+- `anon` e `authenticated` não recebem `SELECT` nas tabelas privadas. As visões `cloud_*` chamam projeções privadas, sem parâmetros, com colunas explícitas e `search_path` fixo.
 - Não há login de usuário nem armazenamento de senha de corretora nesta entrega.
 - Nunca adicione credenciais de corretora, chave administrativa do Supabase ou JWT de cron a `cloud-config.js`, ao ZIP publicado ou ao controle de versão.
 
 ## 9. Disclaimer operacional
 
-Signal Atlas não é consultoria, recomendação financeira nem robô executor. Mercado real pode apresentar atraso, gap, spread, slippage, payout variável, rejeição de ordem e regras de empate diferentes do paper trading. Cripto, Forex e opções binárias têm risco elevado; uma sequência curta de acertos ou um backtest forte não prova vantagem futura. Use as métricas para avaliar evidência e risco, nunca como promessa de retorno.
+Market Analyzer não é consultoria, recomendação financeira nem robô executor. Mercado real pode apresentar atraso, gap, spread, slippage, payout variável, rejeição de ordem e regras de empate diferentes do paper trading. Cripto, Forex e opções binárias têm risco elevado; uma sequência curta de acertos ou um backtest forte não prova vantagem futura. Use as métricas para avaliar evidência e risco, nunca como promessa de retorno.

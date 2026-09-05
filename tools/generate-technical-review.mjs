@@ -35,6 +35,18 @@ function paperRows(snapshot) {
     .join('\n');
 }
 
+function baselineRows(snapshot) {
+  return snapshot.naiveBaselines
+    .map((item) => `| ${item.strategy} | ${item.trades} | ${item.winRatePct.toFixed(2)}% | ${item.evPerOpportunity.toFixed(4)} |`)
+    .join('\n');
+}
+
+function gradeRows(snapshot) {
+  return snapshot.gradeCalibration
+    .map((item) => `| ${item.grade} | ${item.trades} | ${item.winRatePct.toFixed(2)}% | ${item.wilsonLowerPct.toFixed(2)}%–${item.wilsonUpperPct.toFixed(2)}% | ${item.evPerTrade.toFixed(4)} |`)
+    .join('\n');
+}
+
 export function buildTechnicalReview() {
   const snapshot = readJson('docs/technical-review-runtime-snapshot.json');
   const pkg = readJson('package.json');
@@ -47,8 +59,10 @@ export function buildTechnicalReview() {
 
 > Documento gerado por \`tools/generate-technical-review.mjs\`. Não edite números de produção diretamente neste arquivo: atualize primeiro \`docs/technical-review-runtime-snapshot.json\` com consultas somente leitura e execute \`npm run docs:technical-review\`.
 
-Última verificação do ambiente: **${snapshot.verifiedAt}**  
-Fonte do snapshot: **${snapshot.source}**  
+Última verificação do ambiente: **${snapshot.verifiedAt}**
+
+Fonte do snapshot: **${snapshot.source}**
+
 Contrato de qualidade vigente: **v4 (migration 026)**
 
 ## 1. Conclusão executiva
@@ -88,7 +102,7 @@ Ter A/A+ e continuar em avaliação baixa é comportamento intencional: a nota m
 |---|---:|---:|---:|---:|---:|
 ${paperRows(snapshot)}
 
-Desde a migration 027, novos ciclos usam somente a política única interna \`neutro\`, com custo adicional zero. A curva atual começa do zero e não mistura os resultados antigos: **${snapshot.currentPaperSummary.trades} operações resolvidas**, benchmark inicial **${snapshot.currentPaperSummary.benchmarkEvPerTrade.toFixed(4)}** por operação. O ledger histórico dos três modos não foi apagado nem recalculado.
+Desde a migration 027, novos ciclos usam somente a política única interna \`neutro\`, com custo adicional zero. A curva atual não mistura os resultados antigos: **${snapshot.currentPaperSummary.trades} operações resolvidas**, EV **${snapshot.currentPaperSummary.evNetPerTrade.toFixed(4)}**, benchmark **${snapshot.currentPaperSummary.benchmarkEvPerTrade.toFixed(4)}** e diferença **${snapshot.currentPaperSummary.edgeVsBenchmark.toFixed(4)}** por operação. O ledger histórico dos três modos não foi apagado nem recalculado.
 
 O estado de saúde do snapshot era \`${snapshot.systemHealth.status}\`, com **${snapshot.systemHealth.resolvedProspectiveSignals}** sinais prospectivos resolvidos. \`partial\` descreve cobertura/execução incompleta do ciclo, não lucro nem falha estatística por si só.
 
@@ -159,10 +173,39 @@ O teste \`test:technical-review\` falha se este documento divergir do gerador, s
 - O arquivo de calendário precisa acumular meses antes de sustentar conclusões históricas fortes.
 - Atualize o snapshot com consultas somente leitura antes de publicar uma nova afirmação numérica.
 
-## 11. Arquivos prioritários para nova revisão
+## 11. Diagnóstico estatístico adicionado em 05/09/2026
+
+As migrations 029–032 criam um laboratório prospectivo separado e diagnósticos retrospectivos somente de leitura. Nenhum deles altera pesos, direção, qualidade, modelo ou histórico.
+
+### Regras ingênuas na mesma amostra resolvida
+
+| Estratégia | Operações | Taxa | EV/oportunidade |
+|---|---:|---:|---:|
+${baselineRows(snapshot)}
+
+O motor ainda fica abaixo do acaso e de sempre comprar nessa amostra. Isso é evidência para investigação, não autorização para trocar a estratégia usando os mesmos dados.
+
+### Nota com intervalo de Wilson de 95%
+
+| Nota | Operações | Taxa | Intervalo 95% | EV/operação |
+|---|---:|---:|---:|---:|
+${gradeRows(snapshot)}
+
+A nota A apresenta inversão real na amostra observada: seu limite superior de 95% fica abaixo do limite inferior da nota D. O problema está especialmente concentrado em EURUSD M5, nas duas direções. Pesos não foram ajustados; o laboratório prospectivo precisa confirmar qualquer hipótese em dados novos.
+
+O classificador causal de regime já foi anexado a **${snapshot.regimeSnapshots}** decisões novas. O treino cloud agora exige três janelas walk-forward expansivas, cada uma com cobertura mínima e EV por oportunidade não negativo. O laboratório tinha **${snapshot.strategyLab.opportunities} oportunidades em ${snapshot.strategyLab.distinctDays} dias**; a revisão continua bloqueada até **${snapshot.strategyLab.reviewMinimumOpportunities} oportunidades e ${snapshot.strategyLab.reviewMinimumDays} dias**.
+
+O benchmark prospectivo foi corrigido para a mesma cobertura de cada braço: quando o braço aguarda, o controle aleatório também aguarda. Assim, um braço que sempre fica parado não pode aparentar vantagem apenas por evitar o payout negativo.
+
+## 12. Arquivos prioritários para nova revisão
 
 - \`supabase/migrations/202608310026_decouple_confirmed_quality.sql\`
 - \`supabase/migrations/202609010027_single_policy_zero_cost.sql\`
+- \`supabase/migrations/202609040028_fix_gap_batch_reconciliation.sql\`
+- \`supabase/migrations/202609040029_prospective_strategy_lab.sql\`
+- \`supabase/migrations/202609040030_fix_and_expand_strategy_controls.sql\`
+- \`supabase/migrations/202609040031_statistical_diagnostics_and_regime.sql\`
+- \`supabase/migrations/202609050032_coverage_matched_strategy_benchmark.sql\`
 - \`supabase/tests/confirmed_quality_contract.sql\`
 - \`supabase/tests/single_policy_contract.sql\`
 - \`supabase/functions/market-cycle/index.ts\`
@@ -173,7 +216,7 @@ O teste \`test:technical-review\` falha se este documento divergir do gerador, s
 - \`tools/generate-technical-review.mjs\`
 - \`docs/technical-review-runtime-snapshot.json\`
 
-## 12. Uso correto
+## 13. Uso correto
 
 Trate direção, força, nota, probabilidade e histórico como apoio a paper trading e pesquisa. Mesmo uma nota A+ pode perder. Nenhuma métrica isolada é recomendação financeira ou garantia de acerto.
 `;

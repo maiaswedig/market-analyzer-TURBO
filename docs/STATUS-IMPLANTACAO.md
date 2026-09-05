@@ -1,5 +1,19 @@
 # Status verificado da implantação
 
+## Atualização de 05/09/2026 — diagnóstico estatístico e robustez
+
+- Produção Supabase possui 32 migrations; `market-cycle` v13 e `train-challenger` v6 estão ativos com `verify_jwt=true`.
+- A fila de lacunas foi corrigida para reler o estado atual antes de cada transição. No corte final havia zero lacuna pendente; lacunas irrecuperáveis permanecem terminais e fora das métricas.
+- O scanner passou a registrar erros por ativo/timeframe e a considerar falha de backfill no estado de saúde. Os ciclos recentes estavam `ok`, sem erro de escopo.
+- O Yahoo não reenvia candles vizinhos revisados durante o backfill de uma lacuna; somente o candle exato solicitado entra na tentativa.
+- O treino cloud exige três janelas walk-forward expansivas, com purga, cobertura mínima e EV não negativo em todas, além dos gates anteriores. Isso endurece a validação offline, mas não altera a promoção prospectiva de 500 pares/20 dias.
+- O regime de mercado é calculado causalmente e congelado em novos sinais. Havia 1.255 snapshots de regime no corte.
+- A UI passa a mostrar regras ingênuas e intervalos de Wilson por nota. Na fotografia de 7.156 resultados, o Market Analyzer marcou 48,11% e EV -0,1099; o acaso esperado ficou em 50% e EV -0,0750.
+- A nota A apresentou 42,95%, Wilson 95% de 40,15% a 45,80% e EV -0,2053; a nota D apresentou 53,22%, intervalo de 50,50% a 55,91% e EV -0,0155. A inversão é estatisticamente relevante nessa amostra e ficou concentrada sobretudo em EURUSD M5. Nenhum peso foi ajustado com esses mesmos dados.
+- Seis braços prospectivos coletam direção atual, inversa, apenas A/A+, sempre compra, sempre vende e último candle. Eles não promovem automaticamente. A revisão continua bloqueada até 500 oportunidades e 20 dias.
+- O benchmark do laboratório agora respeita a cobertura: se um braço aguarda, o aleatório também aguarda. Isso impede um braço inativo de parecer superior apenas por não pagar o payout negativo.
+- Contratos SQL de segurança, diagnóstico, estratégia e lacunas passaram no banco vivo; 31/31 testes unitários do motor passaram localmente.
+
 ## Atualização de 01/09/2026 — Vercel e GitHub
 
 - O endereço público canônico é `https://market-analyzer-ia.vercel.app/`.

@@ -1,4 +1,4 @@
-import { conservativeProviderClock, fetchMarketCandles } from "../_shared/providers.ts";
+import { conservativeProviderClock, fetchGapWindow, fetchMarketCandles } from "../_shared/providers.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -80,6 +80,33 @@ Deno.test("Yahoo recebe M30 nativo e mantém a grade causal de 30 minutos", asyn
     assert(requests.length === 1 && requests[0].includes("interval=30m"), "Yahoo não recebeu o intervalo M30 nativo");
     assert(rows.length === 1 && rows[0].timeframe === "M30" && rows[0].openTime === openTime,
       "candle Yahoo M30 não preservou timeframe/grade");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("recuperação Yahoo devolve somente o candle exato sem reenviar vizinhos revisados", async () => {
+  const originalFetch = globalThis.fetch;
+  const target = Date.UTC(2026, 7, 30, 13, 30, 0);
+  const asOf = Date.UTC(2026, 7, 30, 14, 30, 0);
+  const times = [target - 30 * 60_000, target, target + 30 * 60_000];
+  globalThis.fetch = (async () => new Response(JSON.stringify({ chart: { result: [{
+    timestamp: times.map(value => value / 1_000),
+    indicators: { quote: [{
+      open: [1.1, 1.2, 1.3], high: [1.2, 1.3, 1.4], low: [1, 1.1, 1.2],
+      close: [1.15, 1.25, 1.35], volume: [0, 0, 0],
+    }] },
+  }] } }), { status: 200, headers: { "content-type": "application/json", date: new Date(asOf).toUTCString() } })) as typeof fetch;
+
+  try {
+    const rows = await fetchGapWindow({
+      symbol: "EURUSD",
+      providerSymbol: "EURUSD=X",
+      market: "forex",
+      source: "yahoo",
+    }, "M30", target, asOf);
+    assert(rows.length === 1 && rows[0].openTime === target,
+      "recuperação reenviou candles vizinhos em vez da chave exata");
   } finally {
     globalThis.fetch = originalFetch;
   }

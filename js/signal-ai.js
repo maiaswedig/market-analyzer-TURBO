@@ -722,6 +722,100 @@ function renderCloudQualityBreakdown(snapshot) {
   }).join('');
 }
 
+function renderCloudStrategyLab(snapshot) {
+  const target = $('#cloudStrategyLab');
+  if (!target) return;
+  const rows = snapshot && Array.isArray(snapshot.strategyLab) ? snapshot.strategyLab : [];
+  const definitions = [
+    { key: 'technical_current', label: 'Direção atual' },
+    { key: 'technical_inverse', label: 'Direção oposta · controle' },
+    { key: 'grade_a_or_a_plus', label: 'Somente A/A+' },
+    { key: 'always_buy', label: 'Sempre compra · referência' },
+    { key: 'always_sell', label: 'Sempre vende · referência' },
+    { key: 'last_closed_candle', label: 'Repete o último candle' },
+  ];
+  target.innerHTML = definitions.map(item => {
+    const row = rows.find(value => value && value.arm === item.key);
+    const opportunities = row ? Math.max(0, Math.round(Number(row.opportunities) || 0)) : 0;
+    const days = row ? Math.max(0, Math.round(Number(row.distinct_days) || 0)) : 0;
+    if (!row || !opportunities) {
+      return `<div class="cloud-quality-card is-empty"><span>${escapeHtml(item.label)}</span><b>Sem amostra</b><small>Aguardando novos resultados prospectivos</small></div>`;
+    }
+    const trades = Math.max(0, Math.round(Number(row.trades) || 0));
+    const ev = cloudMoney(row.ev_per_opportunity, { signed: true });
+    const evPerTrade = cloudNumber(row.ev_per_trade) === null ? '—' : cloudMoney(Number(row.ev_per_trade), { signed: true });
+    const benchmarkValue = cloudNumber(row.coverage_matched_random_ev) ?? cloudNumber(row.random_benchmark_ev);
+    const benchmark = benchmarkValue === null ? '—' : cloudMoney(benchmarkValue, { signed: true });
+    const winRate = cloudNumber(row.win_rate) === null ? '—' : fmtPct(Number(row.win_rate) * 100);
+    const ready = row.review_ready === true;
+    const passed = row.beats_random_conservatively === true;
+    const tone = ready ? (passed ? 'is-positive' : 'is-negative') : 'is-empty';
+    const verdict = !ready ? `coletando · ${opportunities}/500 · ${days}/20 dias`
+      : passed ? 'superou o acaso com margem conservadora' : 'não superou o acaso com segurança';
+    return `<div class="cloud-quality-card ${tone}"><span>${escapeHtml(item.label)}</span><b>${escapeHtml(winRate)} · EV/oportunidade ${escapeHtml(ev)}</b><small>${trades.toLocaleString('pt-BR')} operações em ${opportunities.toLocaleString('pt-BR')} oportunidades · EV/operação ${escapeHtml(evPerTrade)} · acaso com a mesma cobertura ${escapeHtml(benchmark)} · ${escapeHtml(verdict)}</small></div>`;
+  }).join('');
+}
+
+function renderCloudStatisticalDiagnostics(snapshot) {
+  const baselineBody = $('#cloudNaiveBaselineRows');
+  const gradeBody = $('#cloudGradeCalibrationRows');
+  const notice = $('#cloudDiagnosticNotice');
+  if (!baselineBody || !gradeBody) return;
+
+  const baselineLabels = {
+    market_analyzer: 'Market Analyzer',
+    always_buy: 'Sempre compra',
+    always_sell: 'Sempre vende',
+    last_closed_candle: 'Repete o último candle',
+    random_50_expected: 'Acaso esperado (50%)',
+  };
+  const baselines = snapshot && Array.isArray(snapshot.naiveBaselines) ? snapshot.naiveBaselines : [];
+  if (!baselines.length) {
+    baselineBody.innerHTML = '<tr><td colspan="5" class="empty-row empty-awaiting">Aguardando diagnóstico da nuvem.</td></tr>';
+  } else {
+    const random = baselines.find(row => row && row.strategy === 'random_50_expected');
+    const randomEv = random ? Number(random.ev_per_opportunity) : null;
+    baselineBody.innerHTML = baselines.map(row => {
+      const opportunities = Math.max(0, Math.round(Number(row.opportunities) || 0));
+      const trades = Math.max(0, Math.round(Number(row.trades) || 0));
+      const coverage = cloudNumber(row.coverage) === null ? '—' : fmtPct(Number(row.coverage) * 100);
+      const winRate = cloudNumber(row.win_rate) === null ? '—' : fmtPct(Number(row.win_rate) * 100);
+      const evValue = cloudNumber(row.ev_per_opportunity);
+      const ev = evValue === null ? '—' : cloudMoney(evValue, { signed: true });
+      const isSampled = row.strategy !== 'random_50_expected';
+      const comparison = !isSampled ? 'referência matemática, não sequência sorteada'
+        : Number.isFinite(randomEv) && evValue !== null
+          ? `${evValue > randomEv ? 'acima' : evValue < randomEv ? 'abaixo' : 'igual'} ao acaso nessa amostra`
+          : 'diagnóstico retrospectivo';
+      return `<tr><td data-label="Referência"><b>${escapeHtml(baselineLabels[row.strategy] || row.strategy || '—')}</b></td><td data-label="Cobertura">${escapeHtml(coverage)}<small>${trades.toLocaleString('pt-BR')} / ${opportunities.toLocaleString('pt-BR')} oportunidades</small></td><td data-label="Taxa">${escapeHtml(winRate)}</td><td data-label="EV por oportunidade">${escapeHtml(ev)}</td><td data-label="Leitura">${escapeHtml(comparison)}</td></tr>`;
+    }).join('');
+  }
+
+  const grades = snapshot && Array.isArray(snapshot.gradeCalibration) ? snapshot.gradeCalibration : [];
+  const gradeOrder = { 'A+': 0, A: 1, B: 2, C: 3, D: 4 };
+  if (!grades.length) {
+    gradeBody.innerHTML = '<tr><td colspan="5" class="empty-row empty-awaiting">Aguardando calibração por nota.</td></tr>';
+  } else {
+    gradeBody.innerHTML = [...grades].sort((a, b) => (gradeOrder[a.grade] ?? 99) - (gradeOrder[b.grade] ?? 99)).map(row => {
+      const trades = Math.max(0, Math.round(Number(row.trades) || 0));
+      const winRate = cloudNumber(row.win_rate) === null ? '—' : fmtPct(Number(row.win_rate) * 100);
+      const lower = cloudNumber(row.wilson_lower) === null ? '—' : fmtPct(Number(row.wilson_lower) * 100);
+      const upper = cloudNumber(row.wilson_upper) === null ? '—' : fmtPct(Number(row.wilson_upper) * 100);
+      const ev = cloudNumber(row.ev_per_trade) === null ? '—' : cloudMoney(Number(row.ev_per_trade), { signed: true });
+      return `<tr><td data-label="Nota"><span class="grade">${escapeHtml(row.grade || '—')}</span></td><td data-label="Amostra">${trades.toLocaleString('pt-BR')}</td><td data-label="Taxa observada">${escapeHtml(winRate)}<small>empates no denominador</small></td><td data-label="Intervalo 95%">${escapeHtml(lower)} a ${escapeHtml(upper)}<small>Wilson</small></td><td data-label="EV por sinal">${escapeHtml(ev)}</td></tr>`;
+    }).join('');
+  }
+
+  if (notice && grades.length) {
+    const gradeA = grades.find(row => row && row.grade === 'A');
+    const gradeD = grades.find(row => row && row.grade === 'D');
+    const inversion = gradeA && gradeD && Number(gradeA.wilson_upper) < Number(gradeD.wilson_lower);
+    notice.textContent = inversion
+      ? 'Alerta diagnóstico: o intervalo de 95% da nota A está abaixo do da nota D nesta amostra. Isso justifica investigação segmentada, não inversão automática nem ajuste dos pesos nesta mesma amostra.'
+      : 'Os intervalos mostram a incerteza da amostra. Diferenças sobrepostas não devem ser tratadas como vantagem comprovada.';
+  }
+}
+
 function cloudOutcomePresentation(value) {
   const outcome = String(value || '').toUpperCase();
   if (outcome === 'ACERTO') return { label: 'Acerto', tone: 'win' };
@@ -801,6 +895,8 @@ function renderCloudMonitor(snapshot = state.cloud.snapshot, { loading = state.c
   setCloudElementText('#cloudPaperDrawdown', paper ? cloudMoney(paper.maxDrawdown) : '—');
   setCloudElementText('#cloudPaperBenchmark', paper ? cloudMoney(paper.benchmarkEv, { signed: true }) : '—');
   renderCloudQualityBreakdown(snapshot);
+  renderCloudStrategyLab(snapshot);
+  renderCloudStatisticalDiagnostics(snapshot);
   renderCloudOpportunities(snapshot);
   renderCloudGradeHistory(snapshot);
   renderOfficialCloudSignal(snapshot);
@@ -839,7 +935,7 @@ async function refreshCloudMonitor({ manual = false } = {}) {
     const previous = state.cloud.snapshot;
     const fallback = previous
       ? { ...previous, configured: true, status: 'offline', fromCache: true }
-      : { configured: true, status: 'offline', fromCache: false, canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], paper: null, health: null };
+      : { configured: true, status: 'offline', fromCache: false, canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], strategyLab: [], naiveBaselines: [], gradeCalibration: [], paper: null, health: null };
     state.cloud.snapshot = fallback;
     renderCloudMonitor(fallback, { loading: false });
   } finally {

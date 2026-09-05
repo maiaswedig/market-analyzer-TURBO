@@ -27,6 +27,7 @@ Para revisão por outra IA sem usar ZIP, comece por [PERPLEXITY-REVIEW.md](PERPL
 | Retenção/arquivamento automático do banco | Pendente | O banco cresce continuamente e precisa de monitoramento e de uma futura política auditável de arquivo. |
 | Backup completo do estado local | Pendente | O CSV preserva o histórico visível para auditoria, mas não restaura modelos e preferências. |
 | Execução em corretora | Não implementada | Paper trading e sinais são intencionalmente separados de qualquer ordem real. |
+| Diagnóstico estatístico e laboratório prospectivo | Ativo | Regras ingênuas, Wilson por nota, regime causal e seis braços shadow são somente diagnóstico; não alteram automaticamente o motor. |
 
 Esse quadro descreve o que está incluído no pacote; não substitui a verificação do ambiente publicado. Consulte o [estado verificado da implantação](docs/STATUS-IMPLANTACAO.md) e o [guia de operação e recuperação](docs/GUIA-OPERACAO-E-RECUPERACAO.md) antes de considerar o serviço 24/7 ativo.
 
@@ -45,6 +46,7 @@ Esse quadro descreve o que está incluído no pacote; não substitui a verifica�
 - **Persistência real:** modelos aceitos, histórico, feedback/calibração e preferências sobrevivem ao fechamento da aba no mesmo navegador.
 - **Histórico auditável e visão operacional:** o primeiro sinal publicado na vela é congelado e depois comparado com a expiração registrada. O ledger bruto preserva todos os níveis para treino; a tabela e o CSV mostram todos os A/A+, inclusive os de avaliação baixa, com a qualidade explícita para não inflar a interpretação da nota.
 - **Economia e benchmark:** a política única vigente registra custo adicional zero, conforme solicitado. A taxa aparece junto da referência aleatória de 50% e do EV desse benchmark sob o mesmo payout; spread e slippage reais continuam sendo riscos externos que o usuário deve conferir na corretora.
+- **Diagnóstico honesto da estratégia:** o frontend compara o motor com sempre comprar, sempre vender, repetir o último candle e acaso na mesma amostra, além de mostrar intervalo de Wilson por nota. O laboratório prospectivo usa um benchmark com a mesma cobertura de cada braço, portanto “AGUARDAR sempre” não pode parecer vantagem por construção.
 - **Acessibilidade:** onboarding, tooltips, tabelas semânticas e cartões responsivos em telas pequenas.
 
 ## Como a aprendizagem realmente funciona
@@ -54,7 +56,7 @@ Não há uma “IA que descobre lucro sozinha”. Há recalibração controlada 
 1. O sinal pode ler a vela atual em formação e todas as velas anteriores disponíveis.
 2. O treino só cria rótulos depois que a vela-alvo fechou; o futuro nunca entra nas features da decisão.
 3. O modelo local reserva pelo menos 500 amostras recentes de validação e só é aceito quando o ganho de Brier supera uma margem baseada no erro-padrão.
-4. Na nuvem, um único escopo `ativo|timeframe` é treinado por hora para permanecer dentro do orçamento gratuito. O holdout cronológico reserva pelo menos 300 observações recentes e purga a fronteira treino/validação.
+4. Na nuvem, um único escopo `ativo|timeframe` é treinado por hora para permanecer dentro do orçamento gratuito. Além do holdout cronológico de pelo menos 300 observações, o artefato precisa passar três janelas walk-forward expansivas, com purga temporal, cobertura mínima e EV por oportunidade não negativo em todas elas.
 5. O primeiro modelo cloud com amostra suficiente vira uma **baseline inicial** para começar a medição prospectiva. Há 24 baselines, um para cada combinação inicial de 8 ativos × 3 timeframes. Se um deles não passou os gates offline, continua explicitamente como avaliação baixa; baseline não conta como validação forte.
 6. Modelos seguintes entram no laboratório shadow independente. Heurística, champion e challenger escolhem separadamente `COMPRA`, `VENDA` ou `AGUARDAR` sobre a mesma oportunidade neutra. Somente challengers treinados com a política de decisão v2 podem ser promovidos; artefatos e revisões v1 permanecem como evidência histórica. Só há substituição após 500 oportunidades futuras únicas, pelo menos 20 dias, 100 operações do challenger, limite inferior de 95% do ganho de EV por oportunidade acima de zero contra **champion e heurística**, Brier não pior e drawdown controlado.
 7. A nota cloud é calculada por oito verificações distribuídas em cinco famílias (tendência, momentum, RSI, volume e price action), com pesos decrescentes nos sinais correlacionados. Ela ordena evidência técnica; não é uma probabilidade calibrada.
@@ -71,7 +73,7 @@ O frontend é estático, está publicado na Vercel e não possui comando de buil
 
 Para funcionar somente no navegador, basta publicar os arquivos. Para continuar coletando com o site fechado, também é necessário aplicar as migrations, implantar as quatro Edge Functions e ativar os agendamentos no Supabase. O arquivo `cloud-config.example.js` mostra a estrutura da configuração pública do frontend; nenhuma chave administrativa pode ser colocada no navegador.
 
-A implantação atual requer todas as migrations `001`–`027` presentes na pasta. Em especial, `006`–`009` adicionam métricas/ranking por modo, índices e visões públicas; a `010` congela o primeiro evento de cada slot, versiona a política real e torna artefatos idempotentes; a `011` aplica autenticação dupla e remove a API pública legada; a `012` congela o instante causal das resoluções e revisões; a `013` publica curvas diagnósticas separadas por modo e qualidade sem reclassificar o histórico; a `014` instala o laboratório prospectivo de decisões independentes; a `015` cobre sua chave estrangeira de política com índice; a `016` recupera lacunas de candles exatos por uma fila privada, limitada e auditável; a `017` encerra como cancelado o trabalho de fila que deixou de ter decisão pendente; a `018` remove trabalho irmão órfão após abandono terminal; a `019` centraliza o EV de `loss`, `refund` e `win`; a `020` adiciona M30 ao tipo cloud; a `021` ativa M30 no runtime e inicia o arquivo prospectivo do calendário; a `022` fixa a leitura `as-of` na observação versionada; a `023` cria fotografias completas por coleta e a ponte de replay causal; a `024` publica o histórico cloud A/A+; a `025` expõe as explicações públicas das decisões; a `026` desacopla a nota técnica da confirmação prospectiva e cria a fonte canônica do navegador; e a `027` instala a política operacional única com custo adicional zero sem reescrever o legado. Uma reconstrução parcial fica incompatível com o frontend atual.
+A implantação atual requer todas as migrations `001`–`032` presentes na pasta. As migrations `001`–`027` mantêm o ledger causal, treino, M30, calendário, qualidade desacoplada e política única. A `028` corrige a reconciliação em lote de lacunas sem reutilizar estado antigo; `029/030` criam seis controles prospectivos independentes; a `031` publica baselines ingênuos, Wilson por nota, diagnóstico da nota A e persiste o regime causal; e a `032` compara cada braço com um acaso de cobertura idêntica. Uma reconstrução parcial fica incompatível com o frontend atual.
 
 Depois da `011`, os jobs ficam pausados por projeto. Em atualização de uma instalação antiga, aplique primeiro a `011` para pausar os jobs e depois `010`/`012`; em banco novo, aplique os arquivos na ordem numérica. Em ambos os casos, reimplante as Functions antes de ativar os jobs. Não copie JWT, chave secreta ou segredo de cron para `cloud-config.js`, documentação, logs ou navegador.
 
@@ -102,7 +104,7 @@ legacy/js/                     interface antiga arquivada, fora do runtime e dos
 cloud-config.example.js        modelo sem valores da configuração pública
 vercel.json                    publicação principal e cabeçalhos na Vercel
 netlify.toml                   alternativa de recuperação, fora do domínio canônico
-supabase/migrations/           banco causal, política única vigente, legado auditável, índices e agendamentos
+supabase/migrations/           banco causal, política única, diagnósticos, laboratório shadow, índices e agendamentos
 supabase/functions/            coleta, bootstrap, treino challenger e replay causal do calendário
 docs/                          operação, recuperação e metodologia estatística
 ```

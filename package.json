@@ -17,6 +17,7 @@
     "test:technical-review": "node tools/verify-technical-review.mjs",
     "test:public-docs": "node tools/check-public-docs.mjs",
     "test:single-policy-frontend": "node tools/verify-single-policy-frontend.mjs",
+    "test:strategy-lab": "node tools/verify-strategy-lab.mjs",
     "calibrate:score": "node tools/calibrate-score.mjs"
   }
 }

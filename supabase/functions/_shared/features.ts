@@ -1,8 +1,8 @@
 import { candleProgress, signalClock } from "./time.ts";
-import type { AssessmentFamily, AssessmentStatus, Candle, DecisionAssessment, DecisionAssessmentCheck, FeatureRow, MarketDecision, ModelPrediction, StoredModel, Timeframe } from "./types.ts";
+import type { AssessmentFamily, AssessmentStatus, Candle, DecisionAssessment, DecisionAssessmentCheck, FeatureRow, MarketDecision, MarketRegime, ModelPrediction, StoredModel, Timeframe } from "./types.ts";
 
 export const FEATURE_SCHEMA_VERSION = "signal-atlas-cloud-core-v1";
-export const VALIDATION_POLICY_VERSION = 2;
+export const VALIDATION_POLICY_VERSION = 3;
 export const ENGINE_POLICY_VERSION = 1;
 export const INDEPENDENT_DECISION_POLICY_VERSION = 2;
 export const MIN_WARMUP = 210;
@@ -108,6 +108,70 @@ function sortedCandles(candles: Candle[]): Candle[] {
   return candles.slice().sort((a, b) => a.openTime - b.openTime);
 }
 
+function percentileRank(values: Array<number | null>, index: number, lookback = 100): number | null {
+  const current = values[index];
+  if (current === null || !Number.isFinite(current)) return null;
+  const sample = values.slice(Math.max(0, index - lookback + 1), index + 1)
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+  if (sample.length < 20) return null;
+  return 100 * sample.filter((value) => value <= current).length / sample.length;
+}
+
+function trendEfficiency(candles: Candle[], index: number, period = 20): number {
+  const start = Math.max(0, index - period);
+  let travelled = 0;
+  for (let cursor = start + 1; cursor <= index; cursor++) {
+    travelled += Math.abs(candles[cursor].close - candles[cursor - 1].close);
+  }
+  return travelled > 0 ? Math.abs(candles[index].close - candles[start].close) / travelled : 0;
+}
+
+function structureDirection(candles: Candle[], index: number, lookback = 80): number {
+  const slice = candles.slice(Math.max(0, index - lookback + 1), index + 1);
+  const highs: number[] = [];
+  const lows: number[] = [];
+  for (let cursor = 2; cursor < slice.length - 2; cursor++) {
+    let isHigh = true;
+    let isLow = true;
+    for (let offset = cursor - 2; offset <= cursor + 2; offset++) {
+      if (offset === cursor) continue;
+      if (slice[offset].high >= slice[cursor].high) isHigh = false;
+      if (slice[offset].low <= slice[cursor].low) isLow = false;
+    }
+    if (isHigh) highs.push(slice[cursor].high);
+    if (isLow) lows.push(slice[cursor].low);
+  }
+  const risingHigh = highs.length >= 2 && highs.at(-1)! > highs.at(-2)!;
+  const risingLow = lows.length >= 2 && lows.at(-1)! > lows.at(-2)!;
+  const fallingHigh = highs.length >= 2 && highs.at(-1)! < highs.at(-2)!;
+  const fallingLow = lows.length >= 2 && lows.at(-1)! < lows.at(-2)!;
+  if (risingHigh && risingLow) return 2;
+  if (fallingHigh && fallingLow) return -2;
+  if (risingLow && !fallingHigh) return 1;
+  if (fallingHigh && !risingLow) return -1;
+  return 0;
+}
+
+export function classifyMarketRegime(input: {
+  emaAlignment: number;
+  adxLike: number;
+  atrPercentile: number | null;
+  bbBandwidth: number;
+  bbBwPercentile: number | null;
+  structureDir: number;
+}): MarketRegime {
+  if (input.atrPercentile !== null && input.atrPercentile > 88) return "alta volatilidade";
+  if (input.bbBwPercentile !== null && input.bbBwPercentile < 12) return "baixa volatilidade (squeeze)";
+  if (Math.abs(input.emaAlignment) === 3 && Math.abs(input.structureDir) >= 1 && input.adxLike > 0.55) {
+    return input.emaAlignment > 0 ? "tendência forte de alta" : "tendência forte de baixa";
+  }
+  if (Math.abs(input.emaAlignment) >= 2 && input.adxLike > 0.3) {
+    return input.emaAlignment > 0 ? "tendência fraca de alta" : "tendência fraca de baixa";
+  }
+  if (Math.abs(input.emaAlignment) <= 1 && input.adxLike < 0.3) return "consolidação";
+  return "indefinido";
+}
+
 export function buildFeatureRows(rawCandles: Candle[]): FeatureRow[] {
   const candles = sortedCandles(rawCandles);
   if (candles.length < MIN_WARMUP) return [];
@@ -126,6 +190,11 @@ export function buildFeatureRows(rawCandles: Candle[]): FeatureRow[] {
   const volumeMean = rollingMean(volumes, 20, true);
   const closeMean = rollingMean(closes, 20);
   const closeStd = rollingStd(closes, 20, closeMean);
+  const bbBandwidthSeries = closes.map((_, index) => {
+    const mean = closeMean[index];
+    const deviation = closeStd[index];
+    return mean !== null && deviation !== null && mean > 0 ? 4 * deviation / mean : null;
+  });
   const rows: FeatureRow[] = [];
 
   for (let index = MIN_WARMUP - 1; index < candles.length; index++) {
@@ -144,6 +213,17 @@ export function buildFeatureRows(rawCandles: Candle[]): FeatureRow[] {
     const percentB = upper > lower ? (candle.close - lower) / (upper - lower) : 0.5;
     const alignment = ema9[index] > ema21[index] && ema21[index] > ema50[index] ? 1 :
       ema9[index] < ema21[index] && ema21[index] < ema50[index] ? -1 : 0;
+    const emaAlignment = (ema9[index] > ema21[index] ? 1 : -1) +
+      (ema21[index] > ema50[index] ? 1 : -1) +
+      (ema50[index] > ema200[index] ? 1 : -1);
+    const regimeInputs = {
+      emaAlignment,
+      adxLike: trendEfficiency(candles, index),
+      atrPercentile: percentileRank(atrSeries, index),
+      bbBandwidth: safe(bbBandwidthSeries[index]),
+      bbBwPercentile: percentileRank(bbBandwidthSeries, index),
+      structureDir: structureDirection(candles, index),
+    };
     const bodyRatio = (candle.close - candle.open) / range;
     const momentum = candle.close - candles[Math.max(0, index - 5)].close;
     const macdHistogram = macdLine[index] - macdSignal[index];
@@ -176,6 +256,8 @@ export function buildFeatureRows(rawCandles: Candle[]): FeatureRow[] {
       rangeAtr: range / atrValue,
       bollingerPercentB: percentB,
       momentumAtr: momentum / atrValue,
+      regime: classifyMarketRegime(regimeInputs),
+      regimeInputs,
     });
   }
   return rows;
@@ -533,6 +615,7 @@ export function computeMarketDecision(candles: Candle[], live: Candle | null, op
     status: blocked ? "wait" : "signal",
     score,
     grade: gradeDecisionAssessment(assessment.score),
+    regime: latest?.regime || "indefinido",
     assessment,
     confluence,
     confidence,

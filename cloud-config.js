@@ -1,4 +1,4 @@
-// Configuração pública somente para a implantação Netlify.
+// Configuração pública do frontend publicado (Vercel e espelho Netlify).
 // Esta chave publishable não concede acesso às tabelas privadas nem escrita.
 globalThis.SIGNAL_ATLAS_CLOUD_CONFIG = Object.freeze({
   url: 'https://fmxxyysedxawswwcuhgg.supabase.co',

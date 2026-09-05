@@ -164,6 +164,7 @@ async function registerDecision(
     // eight-check, five-family technical scale.
     score: decision.assessment.score,
     grade: decision.grade,
+    regime: decision.regime,
     technical_assessment: decision.assessment,
     confluence_count: decision.confluence,
     confidence: decision.confidence,
@@ -217,7 +218,15 @@ async function processScope(
     // `receivedAt` is the actual end of the provider request, never the cycle
     // start.  This keeps data age and network latency auditable.
     for (const candle of fetched) candle.receivedAt = fetchedAt;
-    await ingestCandles(client, asset, timeframe, fetched, runId, fetchedAt);
+    // Providers deliberately return one overlapping closed candle so the
+    // collector can bridge boundaries. Yahoo may later revise that old OHLC.
+    // The immutable ledger must not accept the revision or reject newer bars
+    // because of it, so only closed bars strictly after the stored frontier
+    // are submitted; the live bar remains updateable until it closes.
+    const ingestable = latest === null
+      ? fetched
+      : fetched.filter((candle) => !candle.isClosed || candle.openTime > latest);
+    await ingestCandles(client, asset, timeframe, ingestable, runId, fetchedAt);
     const decisionNow = Date.now();
     const live = currentLiveCandle(fetched, timeframe, decisionNow);
     const result: ScopeResult = {
@@ -406,7 +415,15 @@ Deno.serve((request) => handleFunction(request, async () => {
     // The database stores explicit 95% confidence bounds for promotion.
     p_z_margin: 1.96,
   });
-  const errors = results.filter((result) => !!result.error).length;
+  const scopeErrors = results
+    .filter((result) => !!result.error)
+    .map((result) => ({
+      symbol: result.symbol,
+      timeframe: result.timeframe,
+      error: result.error,
+    }));
+  const scopeErrorCount = scopeErrors.length;
+  const operationalErrors = scopeErrorCount + Math.max(0, Number(gapBackfill.failed) || 0);
   const registrations = results.flatMap((result) => result.registrations || []);
   const decisionsCreated = registrations.filter((item) => item.kind === "signal" || item.kind === "low-signal").length;
   const waits = registrations.filter((item) => item.kind === "wait").length;
@@ -418,14 +435,17 @@ Deno.serve((request) => handleFunction(request, async () => {
       worker_id: "supabase-edge-market-cycle-v1",
       started_at: iso(startedAt),
       finished_at: iso(finishedAt),
-      status: errors === 0 ? "ok" : errors < results.length ? "partial" : "failed",
+      status: scopeErrorCount === results.length && results.length > 0
+        ? "failed"
+        : operationalErrors > 0 ? "partial" : "ok",
       assets_requested: assets.length,
       decisions_created: decisionsCreated,
       shadows_created: results.reduce((sum, result) => sum + (result.shadowCount || 0), 0),
       waits,
-      errors,
+      errors: operationalErrors,
       details: {
         scopes: results.length,
+        scope_errors: scopeErrors.slice(0, 12),
         last_symbol: lastResult?.symbol || null,
         last_timeframe: lastResult?.timeframe || null,
         candle_gaps: gapBackfill,
@@ -433,17 +453,25 @@ Deno.serve((request) => handleFunction(request, async () => {
       },
       health: [{
         component: "market-cycle",
-        status: errors === 0 ? "healthy" : errors < results.length ? "degraded" : "down",
+        status: scopeErrorCount === results.length && results.length > 0
+          ? "down"
+          : operationalErrors > 0 ? "degraded" : "healthy",
         observed_at: iso(finishedAt),
         latency_ms: finishedAt - startedAt,
         last_data_at: iso(now),
-        message: `${decisionsCreated} sinais · ${waits} aguardares · ${errors} erros · ${gapBackfill.resolved}/${gapBackfill.due} lacunas recuperadas`,
-        details: { assets: assets.length, scopes: results.length, candle_gaps: gapBackfill, calendar_archive: calendarArchive },
+        message: `${decisionsCreated} sinais · ${waits} aguardares · ${operationalErrors} erros operacionais · ${gapBackfill.resolved}/${gapBackfill.due} lacunas recuperadas`,
+        details: {
+          assets: assets.length,
+          scopes: results.length,
+          scope_errors: scopeErrors.slice(0, 12),
+          candle_gaps: gapBackfill,
+          calendar_archive: calendarArchive,
+        },
       }],
     },
   });
   return {
-    ok: results.every((result) => !result.error),
+    ok: operationalErrors === 0,
     runId,
     at: iso(now),
     assets: assets.length,

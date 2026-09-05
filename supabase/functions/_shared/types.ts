@@ -48,7 +48,26 @@ export interface FeatureRow {
   rangeAtr: number;
   bollingerPercentB: number;
   momentumAtr: number;
+  regime: MarketRegime;
+  regimeInputs: {
+    emaAlignment: number;
+    adxLike: number;
+    atrPercentile: number | null;
+    bbBandwidth: number;
+    bbBwPercentile: number | null;
+    structureDir: number;
+  };
 }
+
+export type MarketRegime =
+  | "alta volatilidade"
+  | "baixa volatilidade (squeeze)"
+  | "tendência forte de alta"
+  | "tendência forte de baixa"
+  | "tendência fraca de alta"
+  | "tendência fraca de baixa"
+  | "consolidação"
+  | "indefinido";
 
 export interface LogisticArtifact {
   algorithm: "logistic-regression";
@@ -130,6 +149,7 @@ export interface MarketDecision {
   status: "signal" | "wait";
   score: number;
   grade: "A+" | "A" | "B" | "C" | "D";
+  regime: MarketRegime;
   assessment: DecisionAssessment;
   confluence: number;
   confidence: number | null;

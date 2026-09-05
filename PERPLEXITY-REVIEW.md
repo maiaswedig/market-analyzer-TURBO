@@ -2,8 +2,10 @@
 
 > Documento gerado por `tools/generate-technical-review.mjs`. Não edite números de produção diretamente neste arquivo: atualize primeiro `docs/technical-review-runtime-snapshot.json` com consultas somente leitura e execute `npm run docs:technical-review`.
 
-Última verificação do ambiente: **2026-09-01T12:59:03.252784Z**  
-Fonte do snapshot: **Supabase production, read-only queries**  
+Última verificação do ambiente: **2026-09-05T13:11:11.332368Z**
+
+Fonte do snapshot: **Supabase production, read-only queries after migrations 028-032**
+
 Contrato de qualidade vigente: **v4 (migration 026)**
 
 ## 1. Conclusão executiva
@@ -19,8 +21,8 @@ No snapshot acima, o sistema **ainda não comprovou vantagem líquida sobre o be
 | Função | Versão | Estado | JWT verificado |
 |---|---:|---|---|
 | bootstrap-data | 6 | ACTIVE | sim |
-| market-cycle | 10 | ACTIVE | sim |
-| train-challenger | 5 | ACTIVE | sim |
+| market-cycle | 13 | ACTIVE | sim |
+| train-challenger | 6 | ACTIVE | sim |
 | calendar-replay | 1 | ACTIVE | sim |
 
 | Job | Agenda | Estado |
@@ -32,11 +34,11 @@ O site não precisa permanecer aberto para esses ciclos cloud. O processamento l
 
 ### Ledger e contrato de qualidade v4
 
-- Decisões totais: **7978**.
-- Decisões já emitidas sob o contrato v4: **3124**.
-- Notas A/A+ no contrato v4: **970**.
+- Decisões totais: **15150**.
+- Decisões já emitidas sob o contrato v4: **10296**.
+- Notas A/A+ no contrato v4: **2665**.
 - Qualidade `confirmed` no contrato v4: **0**.
-- Eventos `bootstrap_champion`: **27**.
+- Eventos `bootstrap_champion`: **31**.
 - Eventos reais `promote_champion`: **0**.
 
 Ter A/A+ e continuar em avaliação baixa é comportamento intencional: a nota mede qualidade técnica comparativa; `confirmed` exige evidência prospectiva independente.
@@ -49,9 +51,9 @@ Ter A/A+ e continuar em avaliação baixa é comportamento intencional: a nota m
 | conservador (legado) | 2615 | -0.1336 | -0.0950 | -0.0386 | 367.81 |
 | neutro (legado) | 2615 | -0.1336 | -0.0950 | -0.0386 | 367.81 |
 
-Desde a migration 027, novos ciclos usam somente a política única interna `neutro`, com custo adicional zero. A curva atual começa do zero e não mistura os resultados antigos: **0 operações resolvidas**, benchmark inicial **-0.0750** por operação. O ledger histórico dos três modos não foi apagado nem recalculado.
+Desde a migration 027, novos ciclos usam somente a política única interna `neutro`, com custo adicional zero. A curva atual não mistura os resultados antigos: **7156 operações resolvidas**, EV **-0.1099**, benchmark **-0.0750** e diferença **-0.0349** por operação. O ledger histórico dos três modos não foi apagado nem recalculado.
 
-O estado de saúde do snapshot era `partial`, com **7845** sinais prospectivos resolvidos. `partial` descreve cobertura/execução incompleta do ciclo, não lucro nem falha estatística por si só.
+O estado de saúde do snapshot era `ok`, com **15111** sinais prospectivos resolvidos. `partial` descreve cobertura/execução incompleta do ciclo, não lucro nem falha estatística por si só.
 
 ## 3. Regra atual de nota e qualidade
 
@@ -101,7 +103,7 @@ Fontes públicas incluem OKX, Binance/Coinbase/Kraken para cripto conforme dispo
 - Segredos reais não pertencem ao frontend, documentação, pacote de revisão ou repositório.
 - RLS sem policy nas tabelas privadas é deny-by-default intencional; mudanças devem manter os contratos de segurança.
 
-## 8. Migrations aplicadas e presentes no código (27)
+## 8. Migrations aplicadas e presentes no código (32)
 
 1. `202608260001_cloud_validation.sql`
 2. `202608260002_edge_contract.sql`
@@ -130,6 +132,11 @@ Fontes públicas incluem OKX, Binance/Coinbase/Kraken para cripto conforme dispo
 25. `202608310025_public_cloud_decision_explanations.sql`
 26. `202608310026_decouple_confirmed_quality.sql`
 27. `202609010027_single_policy_zero_cost.sql`
+28. `202609040028_fix_gap_batch_reconciliation.sql`
+29. `202609040029_prospective_strategy_lab.sql`
+30. `202609040030_fix_and_expand_strategy_controls.sql`
+31. `202609040031_statistical_diagnostics_and_regime.sql`
+32. `202609050032_coverage_matched_strategy_benchmark.sql`
 
 ## 9. Verificações automatizadas disponíveis
 
@@ -146,6 +153,7 @@ Fontes públicas incluem OKX, Binance/Coinbase/Kraken para cripto conforme dispo
 - `npm run test:technical-review` — `node tools/verify-technical-review.mjs`
 - `npm run test:public-docs` — `node tools/check-public-docs.mjs`
 - `npm run test:single-policy-frontend` — `node tools/verify-single-policy-frontend.mjs`
+- `npm run test:strategy-lab` — `node tools/verify-strategy-lab.mjs`
 
 O teste `test:technical-review` falha se este documento divergir do gerador, se o snapshot declarar quantidade errada de migrations, se a migration 026 desaparecer ou se o texto voltar a ligar A/A+ a `confirmed`.
 
@@ -158,10 +166,47 @@ O teste `test:technical-review` falha se este documento divergir do gerador, se 
 - O arquivo de calendário precisa acumular meses antes de sustentar conclusões históricas fortes.
 - Atualize o snapshot com consultas somente leitura antes de publicar uma nova afirmação numérica.
 
-## 11. Arquivos prioritários para nova revisão
+## 11. Diagnóstico estatístico adicionado em 05/09/2026
+
+As migrations 029–032 criam um laboratório prospectivo separado e diagnósticos retrospectivos somente de leitura. Nenhum deles altera pesos, direção, qualidade, modelo ou histórico.
+
+### Regras ingênuas na mesma amostra resolvida
+
+| Estratégia | Operações | Taxa | EV/oportunidade |
+|---|---:|---:|---:|
+| market_analyzer | 7156 | 48.11% | -0.1099 |
+| always_buy | 7156 | 49.29% | -0.0882 |
+| always_sell | 7156 | 46.03% | -0.1484 |
+| last_closed_candle | 6833 | 46.64% | -0.1309 |
+| random_50_expected | 7156 | 50.00% | -0.0750 |
+
+O motor ainda fica abaixo do acaso e de sempre comprar nessa amostra. Isso é evidência para investigação, não autorização para trocar a estratégia usando os mesmos dados.
+
+### Nota com intervalo de Wilson de 95%
+
+| Nota | Operações | Taxa | Intervalo 95% | EV/operação |
+|---|---:|---:|---:|---:|
+| A+ | 516 | 51.16% | 46.86%–55.45% | -0.0535 |
+| A | 1178 | 42.95% | 40.15%–45.80% | -0.2053 |
+| B | 1887 | 45.84% | 43.60%–48.09% | -0.1520 |
+| C | 2269 | 49.05% | 47.00%–51.11% | -0.0925 |
+| D | 1306 | 53.22% | 50.50%–55.91% | -0.0155 |
+
+A nota A apresenta inversão real na amostra observada: seu limite superior de 95% fica abaixo do limite inferior da nota D. O problema está especialmente concentrado em EURUSD M5, nas duas direções. Pesos não foram ajustados; o laboratório prospectivo precisa confirmar qualquer hipótese em dados novos.
+
+O classificador causal de regime já foi anexado a **1255** decisões novas. O treino cloud agora exige três janelas walk-forward expansivas, cada uma com cobertura mínima e EV por oportunidade não negativo. O laboratório tinha **1242 oportunidades em 2 dias**; a revisão continua bloqueada até **500 oportunidades e 20 dias**.
+
+O benchmark prospectivo foi corrigido para a mesma cobertura de cada braço: quando o braço aguarda, o controle aleatório também aguarda. Assim, um braço que sempre fica parado não pode aparentar vantagem apenas por evitar o payout negativo.
+
+## 12. Arquivos prioritários para nova revisão
 
 - `supabase/migrations/202608310026_decouple_confirmed_quality.sql`
 - `supabase/migrations/202609010027_single_policy_zero_cost.sql`
+- `supabase/migrations/202609040028_fix_gap_batch_reconciliation.sql`
+- `supabase/migrations/202609040029_prospective_strategy_lab.sql`
+- `supabase/migrations/202609040030_fix_and_expand_strategy_controls.sql`
+- `supabase/migrations/202609040031_statistical_diagnostics_and_regime.sql`
+- `supabase/migrations/202609050032_coverage_matched_strategy_benchmark.sql`
 - `supabase/tests/confirmed_quality_contract.sql`
 - `supabase/tests/single_policy_contract.sql`
 - `supabase/functions/market-cycle/index.ts`
@@ -172,6 +217,6 @@ O teste `test:technical-review` falha se este documento divergir do gerador, se 
 - `tools/generate-technical-review.mjs`
 - `docs/technical-review-runtime-snapshot.json`
 
-## 12. Uso correto
+## 13. Uso correto
 
 Trate direção, força, nota, probabilidade e histórico como apoio a paper trading e pesquisa. Mesmo uma nota A+ pode perder. Nenhuma métrica isolada é recomendação financeira ou garantia de acerto.

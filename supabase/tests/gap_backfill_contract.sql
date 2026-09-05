@@ -8,6 +8,7 @@ declare
   v_run uuid := pg_catalog.gen_random_uuid();
   v_as_of timestamptz := pg_catalog.clock_timestamp() - interval '1 second';
   v_ids uuid[];
+  v_terminal_ids uuid[];
   v_gap_id uuid;
   v_abandoned_decision uuid;
   v_resolved_decision uuid;
@@ -24,47 +25,74 @@ begin
   perform 1
   from signal_atlas.reconcile_candle_gaps_at(v_as_of, v_run, v_ids);
 
+  -- A production queue can contain old rows already near the terminal retry,
+  -- so it is invalid to assume every claimed row starts at attempt zero. Every
+  -- processed row must, however, release its lease and keep coherent clocks.
   if exists (
     select 1 from signal_atlas.candle_gaps g
     where g.id = any(v_ids)
       and (
-        g.attempts <> 1
-        or g.status <> 'pending'
-        or g.next_retry_at <> v_as_of + interval '5 minutes'
-        or g.lease_token is not null
+        g.lease_token is not null
         or g.lease_expires_at is not null
+        or not (
+          (g.status = 'pending' and g.resolved_at is null and g.cancelled_at is null)
+          or (g.status = 'permanently_missing' and g.resolved_at is null and g.cancelled_at is null)
+          or (g.status = 'cancelled' and g.resolved_at is null and g.cancelled_at is not null)
+          or (g.status = 'resolved' and g.resolved_at is not null and g.cancelled_at is null)
+        )
       )
   ) then
-    raise exception 'gap contract: first retry is not exactly five minutes or lease leaked';
+    raise exception 'gap contract: reconciliation leaked a lease or produced incoherent clocks';
   end if;
 
   -- A live database may currently have no missing candle. In that healthy
   -- state the bounded/no-privilege checks still pass and the terminal branch
   -- has no row to exercise.
-  v_gap_id := v_ids[1];
+  select g.id into v_gap_id
+  from signal_atlas.candle_gaps g
+  where g.id = any(v_ids) and g.status = 'pending'
+  order by g.id
+  limit 1;
   if v_gap_id is not null then
     v_run := pg_catalog.gen_random_uuid();
+    v_terminal_ids := v_ids;
     update signal_atlas.candle_gaps
     set attempts = 7,
         first_detected_at = v_as_of - interval '13 hours',
         next_retry_at = v_as_of,
         lease_token = v_run,
         lease_expires_at = v_as_of + interval '90 seconds'
-    where id = v_gap_id;
+    where id = any(v_terminal_ids)
+      and status = 'pending';
 
     perform 1
-    from signal_atlas.reconcile_candle_gaps_at(v_as_of, v_run, array[v_gap_id]);
+    from signal_atlas.reconcile_candle_gaps_at(v_as_of, v_run, v_terminal_ids);
 
-    if not exists (
+    -- The batch may contain entry/expiry siblings. Terminally abandoning the
+    -- first can cancel another ID that was already selected. Reconciliation
+    -- must re-read current state and never reuse that sibling's stale row.
+    if exists (
       select 1 from signal_atlas.candle_gaps g
-      where g.id = v_gap_id and g.status = 'permanently_missing' and g.attempts = 8
+      where g.id = any(v_terminal_ids)
+        and g.status = 'pending'
     ) then
-      raise exception 'gap contract: terminal retry did not close the gap';
+      raise exception 'gap contract: terminal batch left claimed work pending';
+    end if;
+    if exists (
+      select 1 from signal_atlas.candle_gaps g
+      where g.id = any(v_terminal_ids)
+        and not (
+          (g.status = 'permanently_missing' and g.resolved_at is null and g.cancelled_at is null)
+          or (g.status = 'cancelled' and g.resolved_at is null and g.cancelled_at is not null)
+          or (g.status = 'resolved' and g.resolved_at is not null and g.cancelled_at is null)
+        )
+    ) then
+      raise exception 'gap contract: terminal batch produced an incoherent status clock';
     end if;
 
     select a.decision_event_id into v_abandoned_decision
     from signal_atlas.resolution_abandonments a
-    where a.candle_gap_id = v_gap_id
+    where a.candle_gap_id = any(v_terminal_ids)
     limit 1;
     if v_abandoned_decision is null then
       raise exception 'gap contract: terminal gap did not append an abandonment';
