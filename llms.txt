@@ -4,7 +4,7 @@
 
 URL principal: https://market-analyzer-ia.vercel.app/
 Idioma principal: português do Brasil
-Data desta documentação: 2026-09-01
+Data desta documentação: 2026-09-05
 
 ## Comece por aqui
 
@@ -28,7 +28,7 @@ O host estático publica somente o frontend e o documento técnico consolidado. 
 
 ## Backend Supabase
 
-O documento técnico público descreve o contrato vigente e o snapshot verificado. Para auditoria linha a linha do backend, use o pacote sanitizado `Market-Analyzer-Qualidade-V4-Documentacao-Final-2026-09-01-v2.zip`, que contém migrations, Edge Functions e testes sem credenciais reais.
+O documento técnico público descreve o contrato vigente e o snapshot verificado. Para auditoria linha a linha do backend, use o pacote sanitizado `Market-Analyzer-Estrategia-Diagnostica-2026-09-05.zip`, que contém migrations, Edge Functions e testes sem credenciais reais.
 
 ## Regras importantes para revisão
 
@@ -36,9 +36,12 @@ O documento técnico público descreve o contrato vigente e o snapshot verificad
 - Sinais locais, backtests e leituras cloud têm métricas separadas.
 - O resultado usa as velas exatas de entrada e expiração; não usa a vela seguinte como substituta.
 - Modelos challenger só substituem o champion após validação prospectiva independente.
+- Um modelo também precisa passar três janelas walk-forward; falhar em uma delas impede sua utilização.
+- Regime de mercado, baselines ingênuos e intervalos de Wilson por nota são registrados para diagnóstico, sem alterar automaticamente o sinal.
+- Estratégias alternativas competem apenas em shadow prospectivo e são comparadas com o acaso na mesma cobertura de entradas.
 - Nota A/A+ ordena qualidade técnica; não equivale a probabilidade calibrada nem concede o selo confirmado.
 - O selo confirmado exige promoção prospectiva real do modelo e gates estatísticos/econômicos independentes.
-- O produto não demonstrou vantagem estatística líquida consistente sobre o benchmark no snapshot verificado de 01/09/2026.
+- O produto não demonstrou vantagem estatística líquida consistente sobre o benchmark no snapshot verificado de 05/09/2026.
 - Dados públicos podem atrasar ou ficar indisponíveis, especialmente Forex via Yahoo Finance.
 
 ## Uso correto
