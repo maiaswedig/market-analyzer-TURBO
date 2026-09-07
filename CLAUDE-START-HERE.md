@@ -1,14 +1,14 @@
 # Market Analyzer — início da revisão técnica
 
-Data de corte do pacote: 05/09/2026.
+Data de corte do pacote: 07/09/2026.
 
 Aplicação: `https://market-analyzer-ia.vercel.app/`
 
 Repositório: `https://github.com/maiaswedig/market-analyzer-TURBO`
 
-Comece por `docs/CLAUDE-REVIEW-ESTRATEGIA-DIAGNOSTICA-2026-09-05.md`. Depois leia `PERPLEXITY-REVIEW.md`, gerado a partir de `docs/technical-review-runtime-snapshot.json` e validado pelo teste `test:technical-review`.
+Comece por `docs/CLAUDE-REVIEW-TIERATE-SESSAO-2026-09-07.md`. Depois leia `docs/CLAUDE-REVIEW-ESTRATEGIA-DIAGNOSTICA-2026-09-05.md` e `PERPLEXITY-REVIEW.md`, gerado a partir de `docs/technical-review-runtime-snapshot.json`.
 
-O pacote contém o frontend, o motor local, as Edge Functions, 32 migrations, contratos SQL e verificadores. Não contém `.env`, `node_modules`, `.git` da origem nem segredos administrativos.
+O pacote contém o frontend, o motor local, as Edge Functions, 33 migrations, contratos SQL e verificadores. Não contém `.env`, `node_modules`, `.git` da origem nem segredos administrativos.
 
 ## Estado que deve ser preservado
 
@@ -21,6 +21,8 @@ O pacote contém o frontend, o motor local, as Edge Functions, 32 migrations, co
 - Backtest, histórico local e ledger cloud permanecem separados.
 - As migrations `029`–`032` são diagnóstico e shadow: não promovem estratégia, não reajustam pesos e não reclassificam histórico.
 - Um braço seletivo é comparado a um acaso com a mesma cobertura; WAIT é comparado com WAIT.
+- O treino cloud v4 estima `tieRate` separadamente em cada janela usando somente o passado daquela janela.
+- O diagnóstico contextual da nota A é somente leitura e não realimenta score, direção, qualidade ou promoção.
 
 ## Ordem sugerida da auditoria
 
@@ -33,8 +35,8 @@ O pacote contém o frontend, o motor local, as Edge Functions, 32 migrations, co
 7. `supabase/migrations/202608310026_decouple_confirmed_quality.sql`: confirmação separada de nota e ligada à promoção real.
 8. `supabase/migrations/202609010027_single_policy_zero_cost.sql`: política única, custo adicional zero e preservação do legado.
 9. `supabase/migrations/202609040028_fix_gap_batch_reconciliation.sql`: concorrência e relógios da fila de lacunas.
-10. `supabase/migrations/202609040029_prospective_strategy_lab.sql` até `202609050032_coverage_matched_strategy_benchmark.sql`: controles prospectivos, baselines, Wilson, regime e benchmark justo.
-11. `supabase/functions/market-cycle/index.ts`, `train-challenger/index.ts` e `_shared/`: coleta, decisão, regime e treino walk-forward.
+10. `supabase/migrations/202609040029_prospective_strategy_lab.sql` até `202609070033_causal_tie_rate_and_grade_a_sessions.sql`: controles prospectivos, baselines, Wilson, regime, benchmark justo e contexto da nota A.
+11. `supabase/functions/market-cycle/index.ts`, `train-challenger/index.ts` e `_shared/logistic.ts`: coleta, decisão, regime e treino walk-forward com empate causal por janela.
 12. `js/cloud-api.js` e `js/signal-ai.js`: apresentação dos diagnósticos, sem realimentação do motor.
 13. `supabase/tests/` e `tools/verify-*.mjs`: contratos permanentes contra regressão.
 
@@ -54,6 +56,8 @@ O pacote contém o frontend, o motor local, as Edge Functions, 32 migrations, co
 - Algum diagnóstico retrospectivo altera pesos, sinais, modelos ou promoção?
 - O braço A/A+ usa um benchmark aleatório restrito às mesmas entradas, impedindo vantagem artificial por WAIT?
 - A inversão A versus D permanece quando segmentada por ativo, timeframe, direção, regime e período?
+- Cada janela usa apenas empates com `at <= trainTo`, e anexar empates futuros deixa todas as taxas históricas idênticas?
+- A visão contextual da nota A preserva outcomes válidos, expiração causal, correções e segurança `security_invoker`?
 
 ## Interpretação estatística obrigatória
 

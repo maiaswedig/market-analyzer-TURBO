@@ -2,7 +2,7 @@ import { candleProgress, signalClock } from "./time.ts";
 import type { AssessmentFamily, AssessmentStatus, Candle, DecisionAssessment, DecisionAssessmentCheck, FeatureRow, MarketDecision, MarketRegime, ModelPrediction, StoredModel, Timeframe } from "./types.ts";
 
 export const FEATURE_SCHEMA_VERSION = "signal-atlas-cloud-core-v1";
-export const VALIDATION_POLICY_VERSION = 3;
+export const VALIDATION_POLICY_VERSION = 4;
 export const ENGINE_POLICY_VERSION = 1;
 export const INDEPENDENT_DECISION_POLICY_VERSION = 2;
 export const MIN_WARMUP = 210;

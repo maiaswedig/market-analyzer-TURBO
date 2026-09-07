@@ -1,6 +1,6 @@
 import { buildFeatureRows, ENGINE_POLICY_VERSION, FEATURE_SCHEMA_VERSION, policySignature } from "../_shared/features.ts";
 import { handleFunction, HttpError, readJson } from "../_shared/http.ts";
-import { trainChronological, type TrainingSample } from "../_shared/logistic.ts";
+import { trainChronological, type TieObservation, type TrainingSample } from "../_shared/logistic.ts";
 import { requiredRpc } from "../_shared/rpc.ts";
 import { createAdminClient } from "../_shared/supabase.ts";
 import { loadClosedCandles } from "../_shared/storage.ts";
@@ -47,17 +47,19 @@ Deno.serve((request) => handleFunction(request, async () => {
   const candles = await loadClosedCandles(client, asset, timeframe, maxCandles);
   const rows = buildFeatureRows(candles);
   const samples: TrainingSample[] = [];
+  const outcomeTimeline: TieObservation[] = [];
   let ties = 0;
   let labeled = 0;
   for (const row of rows) {
     const target = candles[row.index + 1];
     if (!target || !target.isClosed) continue;
     labeled++;
-    if (target.close === target.open) { ties++; continue; }
+    const isTie = target.close === target.open;
+    outcomeTimeline.push({ at: row.openTime, isTie });
+    if (isTie) { ties++; continue; }
     samples.push({ at: row.openTime, vector: row.vector, label: target.close > target.open ? 1 : 0 });
   }
-  const tieRate = labeled ? (ties + 1) / (labeled + 2) : 0;
-  const training = trainChronological(samples, { minValidation, epochs, zMargin: 1.5, tieRate });
+  const training = trainChronological(samples, { minValidation, epochs, zMargin: 1.5, outcomeTimeline });
   if (!training.ok || !training.artifact) {
     return {
       ok: false,
@@ -79,7 +81,14 @@ Deno.serve((request) => handleFunction(request, async () => {
     feature_schema_version: artifact.featureSchemaVersion,
     validation_policy_version: artifact.validationPolicyVersion,
     engine_policy_version: ENGINE_POLICY_VERSION,
-    policy_signature: policySignature({ minValidation, zMargin: 1.5, horizon: "E1", closedCandlesOnly: true, walkForwardWindows: 3 }),
+    policy_signature: policySignature({
+      minValidation,
+      zMargin: 1.5,
+      horizon: "E1",
+      closedCandlesOnly: true,
+      walkForwardWindows: 3,
+      tieRatePolicy: "per-training-window-laplace",
+    }),
     trained_at: artifact.trainedAt,
     train_from: artifact.trainFrom,
     train_to: artifact.trainTo,
@@ -111,7 +120,7 @@ Deno.serve((request) => handleFunction(request, async () => {
     labeled,
     directionalSamples: samples.length,
     ties,
-    tieRate,
+    tieRate: artifact.tieRate,
     candidateUsable: artifact.usable,
     validation: artifact.metrics,
     walkForward: artifact.metrics.walkForward,

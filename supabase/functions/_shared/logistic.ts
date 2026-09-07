@@ -7,12 +7,20 @@ export interface TrainingSample {
   label: 0 | 1;
 }
 
+export interface TieObservation {
+  at: number;
+  isTie: boolean;
+}
+
 export interface TrainingOptions {
   minValidation?: number;
   epochs?: number;
   learningRate?: number;
   l2?: number;
   zMargin?: number;
+  outcomeTimeline?: TieObservation[];
+  // Compatibility fallback for callers that do not yet provide the causal
+  // outcome timeline. The cloud trainer always sends outcomeTimeline.
   tieRate?: number;
 }
 
@@ -101,6 +109,29 @@ function fitWindow(train: TrainingSample[], validation: TrainingSample[], option
   };
 }
 
+function clampRate(value: unknown): number {
+  return Math.max(0, Math.min(1, Number(value) || 0));
+}
+
+function estimateTieRate(
+  timeline: TieObservation[],
+  from: number,
+  to: number,
+  fallback: number,
+) {
+  const observations = timeline.filter((item) => item.at >= from && item.at <= to);
+  if (!observations.length) {
+    return { rate: fallback, observations: 0, ties: 0, source: "compatibility-fallback" };
+  }
+  const ties = observations.reduce((total, item) => total + (item.isTie ? 1 : 0), 0);
+  return {
+    rate: (ties + 1) / (observations.length + 2),
+    observations: observations.length,
+    ties,
+    source: "training-window-laplace",
+  };
+}
+
 function evaluateWalkForward(samples: TrainingSample[], options: TrainingOptions) {
   const windowCount = 3;
   const minValidation = Math.max(300, Math.round(options.minValidation || 300));
@@ -116,7 +147,11 @@ function evaluateWalkForward(samples: TrainingSample[], options: TrainingOptions
   }
   const payout = 0.85;
   const operationCost = 0;
-  const tieRate = Math.max(0, Math.min(1, Number(options.tieRate) || 0));
+  const fallbackTieRate = clampRate(options.tieRate);
+  const outcomeTimeline = (options.outcomeTimeline || [])
+    .filter((item) => item && Number.isFinite(item.at) && typeof item.isTie === "boolean")
+    .slice()
+    .sort((a, b) => a.at - b.at);
   const windows = [];
   for (let index = 0; index < windowCount; index++) {
     const validationStart = samples.length - (windowCount - index) * windowSamples;
@@ -125,6 +160,12 @@ function evaluateWalkForward(samples: TrainingSample[], options: TrainingOptions
     // the first validation feature candle.
     const train = samples.slice(0, Math.max(0, validationStart - 1));
     const validation = samples.slice(validationStart, validationEnd);
+    const tieEstimate = estimateTieRate(
+      outcomeTimeline,
+      train[0].at,
+      train.at(-1)!.at,
+      fallbackTieRate,
+    );
     const fitted = fitWindow(train, validation, options);
     let pnl = 0;
     let trades = 0;
@@ -133,7 +174,7 @@ function evaluateWalkForward(samples: TrainingSample[], options: TrainingOptions
       const up = fitted.validationMetrics.predictions[row];
       const direction = up >= 0.5 ? 1 : 0;
       const directionalProbability = direction === 1 ? up : 1 - up;
-      const winProbability = directionalProbability * (1 - tieRate);
+      const winProbability = directionalProbability * (1 - tieEstimate.rate);
       const expectedEv = winProbability * payout - (1 - winProbability) - operationCost;
       if (expectedEv <= 0) continue;
       trades++;
@@ -150,6 +191,11 @@ function evaluateWalkForward(samples: TrainingSample[], options: TrainingOptions
       validationTo: new Date(validation.at(-1)!.at).toISOString(),
       trainSamples: train.length,
       validationSamples: validation.length,
+      tieRate: tieEstimate.rate,
+      tieObservations: tieEstimate.observations,
+      ties: tieEstimate.ties,
+      tieCutoffAt: new Date(train.at(-1)!.at).toISOString(),
+      tieRateSource: tieEstimate.source,
       trades,
       minimumTrades,
       coverage: trades / validation.length,
@@ -166,7 +212,7 @@ function evaluateWalkForward(samples: TrainingSample[], options: TrainingOptions
     windowSamples,
     payout,
     operationCost,
-    tieRate,
+    tieRatePolicy: outcomeTimeline.length ? "per-training-window-laplace" : "compatibility-fallback",
     windows,
   };
 }
@@ -215,6 +261,17 @@ export function trainChronological(rawSamples: TrainingSample[], options: Traini
   const improvement = -meanDifference;
   const requiredImprovement = zMargin * standardError;
   const overfitGap = Number(trainMetrics.accuracy || 0) - Number(validationMetrics.accuracy || 0);
+  const fallbackTieRate = clampRate(options.tieRate);
+  const outcomeTimeline = (options.outcomeTimeline || [])
+    .filter((item) => item && Number.isFinite(item.at) && typeof item.isTie === "boolean")
+    .slice()
+    .sort((a, b) => a.at - b.at);
+  const mainTieEstimate = estimateTieRate(
+    outcomeTimeline,
+    train[0].at,
+    train.at(-1)!.at,
+    fallbackTieRate,
+  );
   const walkForward = evaluateWalkForward(samples, options);
   const gates = [
     { ok: validation.length >= minValidation, name: "validation-size", detail: `${validation.length} >= ${minValidation}` },
@@ -232,7 +289,7 @@ export function trainChronological(rawSamples: TrainingSample[], options: Traini
     bias,
     mean,
     std,
-    tieRate: Math.max(0, Math.min(1, Number(options.tieRate) || 0)),
+    tieRate: mainTieEstimate.rate,
     trainedAt: new Date().toISOString(),
     trainFrom: new Date(train[0].at).toISOString(),
     trainTo: new Date(train[train.length - 1].at).toISOString(),
@@ -250,6 +307,10 @@ export function trainChronological(rawSamples: TrainingSample[], options: Traini
       requiredImprovement,
       zMargin,
       overfitGap,
+      tieRatePolicy: mainTieEstimate.source,
+      tieObservations: mainTieEstimate.observations,
+      ties: mainTieEstimate.ties,
+      tieCutoffAt: new Date(train.at(-1)!.at).toISOString(),
       walkForward,
       gates,
     },

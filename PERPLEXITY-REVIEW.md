@@ -2,9 +2,9 @@
 
 > Documento gerado por `tools/generate-technical-review.mjs`. Não edite números de produção diretamente neste arquivo: atualize primeiro `docs/technical-review-runtime-snapshot.json` com consultas somente leitura e execute `npm run docs:technical-review`.
 
-Última verificação do ambiente: **2026-09-05T13:11:11.332368Z**
+Última verificação do ambiente: **2026-09-07T11:54:00.024730Z**
 
-Fonte do snapshot: **Supabase production, read-only queries after migrations 028-032**
+Fonte do snapshot: **Supabase production, read-only queries after migrations 028-033**
 
 Contrato de qualidade vigente: **v4 (migration 026)**
 
@@ -22,7 +22,7 @@ No snapshot acima, o sistema **ainda não comprovou vantagem líquida sobre o be
 |---|---:|---|---|
 | bootstrap-data | 6 | ACTIVE | sim |
 | market-cycle | 13 | ACTIVE | sim |
-| train-challenger | 6 | ACTIVE | sim |
+| train-challenger | 7 | ACTIVE | sim |
 | calendar-replay | 1 | ACTIVE | sim |
 
 | Job | Agenda | Estado |
@@ -34,9 +34,9 @@ O site não precisa permanecer aberto para esses ciclos cloud. O processamento l
 
 ### Ledger e contrato de qualidade v4
 
-- Decisões totais: **15150**.
-- Decisões já emitidas sob o contrato v4: **10296**.
-- Notas A/A+ no contrato v4: **2665**.
+- Decisões totais: **18656**.
+- Decisões já emitidas sob o contrato v4: **13802**.
+- Notas A/A+ no contrato v4: **3552**.
 - Qualidade `confirmed` no contrato v4: **0**.
 - Eventos `bootstrap_champion`: **31**.
 - Eventos reais `promote_champion`: **0**.
@@ -47,13 +47,13 @@ Ter A/A+ e continuar em avaliação baixa é comportamento intencional: a nota m
 
 | Modo | Operações | EV líquido/op. | Benchmark/op. | Diferença | Drawdown máx. |
 |---|---:|---:|---:|---:|---:|
-| agressivo (legado) | 2615 | -0.1336 | -0.0950 | -0.0386 | 367.81 |
-| conservador (legado) | 2615 | -0.1336 | -0.0950 | -0.0386 | 367.81 |
-| neutro (legado) | 2615 | -0.1336 | -0.0950 | -0.0386 | 367.81 |
+| agressivo (legado) | 2654 | -0.1319 | -0.0950 | -0.0369 | 367.81 |
+| conservador (legado) | 2654 | -0.1319 | -0.0950 | -0.0369 | 367.81 |
+| neutro (legado) | 2647 | -0.1331 | -0.0950 | -0.0381 | 367.81 |
 
-Desde a migration 027, novos ciclos usam somente a política única interna `neutro`, com custo adicional zero. A curva atual não mistura os resultados antigos: **7156 operações resolvidas**, EV **-0.1099**, benchmark **-0.0750** e diferença **-0.0349** por operação. O ledger histórico dos três modos não foi apagado nem recalculado.
+Desde a migration 027, novos ciclos usam somente a política única interna `neutro`, com custo adicional zero. A curva atual não mistura os resultados antigos: **10627 operações resolvidas**, EV **-0.1144**, benchmark **-0.0750** e diferença **-0.0394** por operação. O ledger histórico dos três modos não foi apagado nem recalculado.
 
-O estado de saúde do snapshot era `ok`, com **15111** sinais prospectivos resolvidos. `partial` descreve cobertura/execução incompleta do ciclo, não lucro nem falha estatística por si só.
+O estado de saúde do snapshot era `ok`, com **18585** sinais prospectivos resolvidos. `partial` descreve cobertura/execução incompleta do ciclo, não lucro nem falha estatística por si só.
 
 ## 3. Regra atual de nota e qualidade
 
@@ -88,6 +88,7 @@ O contrato automatizado `supabase/tests/confirmed_quality_contract.sql` também 
 - O calendário econômico é arquivado de forma append-only e consultado `as-of`; revisões futuras não aparecem no passado.
 - Ranking real, ranking de backtest, histórico local e histórico cloud permanecem separados.
 - Empates continuam no denominador e seguem uma única política econômica versionada.
+- Desde a validação de modelo v4, cada janela walk-forward calcula sua taxa de empate somente com os outcomes anteriores ao próprio fim do treino, usando suavização de Laplace. Empates futuros não participam do gate de EV de janelas antigas.
 
 ## 6. Timeframes, fontes e limites operacionais
 
@@ -103,7 +104,7 @@ Fontes públicas incluem OKX, Binance/Coinbase/Kraken para cripto conforme dispo
 - Segredos reais não pertencem ao frontend, documentação, pacote de revisão ou repositório.
 - RLS sem policy nas tabelas privadas é deny-by-default intencional; mudanças devem manter os contratos de segurança.
 
-## 8. Migrations aplicadas e presentes no código (32)
+## 8. Migrations aplicadas e presentes no código (33)
 
 1. `202608260001_cloud_validation.sql`
 2. `202608260002_edge_contract.sql`
@@ -137,6 +138,7 @@ Fontes públicas incluem OKX, Binance/Coinbase/Kraken para cripto conforme dispo
 30. `202609040030_fix_and_expand_strategy_controls.sql`
 31. `202609040031_statistical_diagnostics_and_regime.sql`
 32. `202609050032_coverage_matched_strategy_benchmark.sql`
+33. `202609070033_causal_tie_rate_and_grade_a_sessions.sql`
 
 ## 9. Verificações automatizadas disponíveis
 
@@ -166,19 +168,19 @@ O teste `test:technical-review` falha se este documento divergir do gerador, se 
 - O arquivo de calendário precisa acumular meses antes de sustentar conclusões históricas fortes.
 - Atualize o snapshot com consultas somente leitura antes de publicar uma nova afirmação numérica.
 
-## 11. Diagnóstico estatístico adicionado em 05/09/2026
+## 11. Diagnóstico estatístico atualizado em 07/09/2026
 
-As migrations 029–032 criam um laboratório prospectivo separado e diagnósticos retrospectivos somente de leitura. Nenhum deles altera pesos, direção, qualidade, modelo ou histórico.
+As migrations 029–033 criam um laboratório prospectivo separado e diagnósticos retrospectivos somente de leitura. Nenhum deles altera pesos, direção, qualidade, modelo ou histórico.
 
 ### Regras ingênuas na mesma amostra resolvida
 
 | Estratégia | Operações | Taxa | EV/oportunidade |
 |---|---:|---:|---:|
-| market_analyzer | 7156 | 48.11% | -0.1099 |
-| always_buy | 7156 | 49.29% | -0.0882 |
-| always_sell | 7156 | 46.03% | -0.1484 |
-| last_closed_candle | 6833 | 46.64% | -0.1309 |
-| random_50_expected | 7156 | 50.00% | -0.0750 |
+| market_analyzer | 10627 | 47.87% | -0.1144 |
+| always_buy | 10627 | 48.97% | -0.0941 |
+| always_sell | 10627 | 46.63% | -0.1374 |
+| last_closed_candle | 10169 | 47.02% | -0.1246 |
+| random_50_expected | 10627 | 50.00% | -0.0750 |
 
 O motor ainda fica abaixo do acaso e de sempre comprar nessa amostra. Isso é evidência para investigação, não autorização para trocar a estratégia usando os mesmos dados.
 
@@ -186,17 +188,19 @@ O motor ainda fica abaixo do acaso e de sempre comprar nessa amostra. Isso é ev
 
 | Nota | Operações | Taxa | Intervalo 95% | EV/operação |
 |---|---:|---:|---:|---:|
-| A+ | 516 | 51.16% | 46.86%–55.45% | -0.0535 |
-| A | 1178 | 42.95% | 40.15%–45.80% | -0.2053 |
-| B | 1887 | 45.84% | 43.60%–48.09% | -0.1520 |
-| C | 2269 | 49.05% | 47.00%–51.11% | -0.0925 |
-| D | 1306 | 53.22% | 50.50%–55.91% | -0.0155 |
+| A+ | 738 | 49.73% | 46.13%–53.33% | -0.0800 |
+| A | 1835 | 43.32% | 41.07%–45.60% | -0.1985 |
+| B | 2795 | 45.80% | 43.96%–47.65% | -0.1528 |
+| C | 3327 | 49.20% | 47.51%–50.90% | -0.0897 |
+| D | 1932 | 52.17% | 49.94%–54.39% | -0.0348 |
 
 A nota A apresenta inversão real na amostra observada: seu limite superior de 95% fica abaixo do limite inferior da nota D. O problema está especialmente concentrado em EURUSD M5, nas duas direções. Pesos não foram ajustados; o laboratório prospectivo precisa confirmar qualquer hipótese em dados novos.
 
-O classificador causal de regime já foi anexado a **1255** decisões novas. O treino cloud agora exige três janelas walk-forward expansivas, cada uma com cobertura mínima e EV por oportunidade não negativo. O laboratório tinha **1242 oportunidades em 2 dias**; a revisão continua bloqueada até **500 oportunidades e 20 dias**.
+O classificador causal de regime já foi anexado a **4743** decisões novas. O treino cloud agora exige três janelas walk-forward expansivas, cada uma com cobertura mínima e EV por oportunidade não negativo. O laboratório tinha **4717 oportunidades em 4 dias**; a revisão continua bloqueada até **500 oportunidades e 20 dias**.
 
 O benchmark prospectivo foi corrigido para a mesma cobertura de cada braço: quando o braço aguarda, o controle aleatório também aguarda. Assim, um braço que sempre fica parado não pode aparentar vantagem apenas por evitar o payout negativo.
+
+A migration 033 acrescenta um diagnóstico somente leitura da nota A por sessão UTC, hora, fonte, idade e latência do dado. O snapshot encontrou **118 grupos** com pelo menos cinco resultados. Eles ajudam a localizar problemas de sessão/feed, mas não reajustam pesos nem alteram sinais.
 
 ## 12. Arquivos prioritários para nova revisão
 
@@ -207,10 +211,13 @@ O benchmark prospectivo foi corrigido para a mesma cobertura de cada braço: qua
 - `supabase/migrations/202609040030_fix_and_expand_strategy_controls.sql`
 - `supabase/migrations/202609040031_statistical_diagnostics_and_regime.sql`
 - `supabase/migrations/202609050032_coverage_matched_strategy_benchmark.sql`
+- `supabase/migrations/202609070033_causal_tie_rate_and_grade_a_sessions.sql`
 - `supabase/tests/confirmed_quality_contract.sql`
 - `supabase/tests/single_policy_contract.sql`
 - `supabase/functions/market-cycle/index.ts`
 - `supabase/functions/_shared/features.ts`
+- `supabase/functions/_shared/logistic.ts`
+- `supabase/functions/train-challenger/index.ts`
 - `js/signal-ai.js`
 - `js/score.js`
 - `js/backtest.js`

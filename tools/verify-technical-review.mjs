@@ -15,7 +15,7 @@ const singlePolicyContract = path.join(root, 'supabase', 'tests', 'single_policy
 
 assert.equal(actual, expected, 'PERPLEXITY-REVIEW.md está diferente do gerador');
 assert.equal(snapshot.migrationsApplied, migrations.length, 'snapshot declara quantidade errada de migrations');
-assert.equal(migrations.at(-1), '202609050032_coverage_matched_strategy_benchmark.sql', 'migration diagnóstica mais recente não é a esperada');
+assert.equal(migrations.at(-1), '202609070033_causal_tie_rate_and_grade_a_sessions.sql', 'migration diagnóstica mais recente não é a esperada');
 assert.ok(fs.existsSync(confirmedContract), 'contrato SQL da qualidade v4 não foi encontrado');
 assert.ok(fs.existsSync(singlePolicyContract), 'contrato SQL da política única não foi encontrado');
 assert.match(actual, /oito de oito pontos aprovados/i);
@@ -24,6 +24,8 @@ assert.match(actual, /ainda não comprovou vantagem líquida sobre o benchmark/i
 assert.match(actual, /custo adicional zero/i);
 assert.match(actual, /intervalo de Wilson/i);
 assert.match(actual, /mesma cobertura de cada braço/i);
+assert.match(actual, /janela walk-forward calcula sua taxa de empate/i);
+assert.match(actual, /sessão UTC, hora, fonte, idade e latência/i);
 assert.doesNotMatch(actual, /Lista só até a migration `013`/i);
 
 console.log(`Technical review contract: OK (${migrations.length} migrations, snapshot ${snapshot.verifiedAt})`);

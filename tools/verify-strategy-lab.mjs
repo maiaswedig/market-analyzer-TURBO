@@ -5,6 +5,7 @@ const migration = fs.readFileSync(new URL('../supabase/migrations/202609040029_p
 const expansion = fs.readFileSync(new URL('../supabase/migrations/202609040030_fix_and_expand_strategy_controls.sql', import.meta.url), 'utf8');
 const diagnostics = fs.readFileSync(new URL('../supabase/migrations/202609040031_statistical_diagnostics_and_regime.sql', import.meta.url), 'utf8');
 const fairBenchmark = fs.readFileSync(new URL('../supabase/migrations/202609050032_coverage_matched_strategy_benchmark.sql', import.meta.url), 'utf8');
+const causalTieAndSessions = fs.readFileSync(new URL('../supabase/migrations/202609070033_causal_tie_rate_and_grade_a_sessions.sql', import.meta.url), 'utf8');
 const gapFix = fs.readFileSync(new URL('../supabase/migrations/202609040028_fix_gap_batch_reconciliation.sql', import.meta.url), 'utf8');
 const edge = fs.readFileSync(new URL('../supabase/functions/market-cycle/index.ts', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -48,6 +49,15 @@ assert.match(html, /id="cloudGradeCalibrationRows"/, 'grade confidence intervals
 assert.match(cloudApi, /cloud_single_naive_baselines/, 'cloud API must load naive baselines');
 assert.match(cloudApi, /cloud_single_grade_calibration/, 'cloud API must load grade calibration');
 assert.match(ui, /function renderCloudStatisticalDiagnostics/, 'statistical diagnostics renderer is missing');
+assert.match(causalTieAndSessions, /cloud_grade_a_session_diagnostic_rows/i, 'grade-A session diagnosis is missing');
+assert.match(causalTieAndSessions, /decision_at at time zone 'UTC'/i, 'grade-A diagnosis must use UTC decision time');
+assert.match(causalTieAndSessions, /data_age_ms[\s\S]+source_latency_ms/i, 'grade-A diagnosis must segment data freshness');
+assert.match(causalTieAndSessions, /security_invoker = true/i, 'grade-A aggregate view must be security invoker');
+assert.doesNotMatch(causalTieAndSessions, /promote_champion|update\s+signal_atlas\.model_artifacts/i,
+  'grade-A context diagnosis must remain read-only');
+assert.match(html, /id="cloudGradeASessionRows"/, 'grade-A session diagnosis must be visible in the frontend');
+assert.match(cloudApi, /cloud_grade_a_session_diagnostics/, 'cloud API must load grade-A session diagnosis');
+assert.match(ui, /gradeASessions/, 'frontend must render grade-A session diagnosis');
 assert.match(fairBenchmark, /case when s\.action = 'wait' then 0::numeric[\s\S]+coverage_benchmark_ev/i,
   'coverage-matched random must compare WAIT with WAIT');
 assert.match(fairBenchmark, /avg\(s\.pnl - s\.coverage_benchmark_ev\)/i,

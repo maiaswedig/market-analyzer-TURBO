@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-09-05T13:11:11.332368Z",
-  "source": "Supabase production, read-only queries after migrations 028-032",
+  "verifiedAt": "2026-09-07T11:54:00.024730Z",
+  "source": "Supabase production, read-only queries after migrations 028-033",
   "projectRef": "fmxxyysedxawswwcuhgg",
-  "migrationsApplied": 32,
-  "latestMigration": "coverage_matched_strategy_benchmark",
+  "migrationsApplied": 33,
+  "latestMigration": "causal_tie_rate_and_grade_a_sessions",
   "edgeFunctions": [
     { "name": "bootstrap-data", "version": 6, "verifyJwt": true, "status": "ACTIVE" },
     { "name": "market-cycle", "version": 13, "verifyJwt": true, "status": "ACTIVE" },
-    { "name": "train-challenger", "version": 6, "verifyJwt": true, "status": "ACTIVE" },
+    { "name": "train-challenger", "version": 7, "verifyJwt": true, "status": "ACTIVE" },
     { "name": "calendar-replay", "version": 1, "verifyJwt": true, "status": "ACTIVE" }
   ],
   "schedules": [
@@ -16,11 +16,11 @@
     { "name": "signal-atlas-train-challenger", "schedule": "7 * * * *", "active": true }
   ],
   "decisionLedger": {
-    "total": 15150,
-    "qualityContractV4": 10296,
-    "gradeAOrAboveV4": 2665,
+    "total": 18656,
+    "qualityContractV4": 13802,
+    "gradeAOrAboveV4": 3552,
     "confirmedV4": 0,
-    "latestDecisionAt": "2026-09-05T13:09:03.503393Z"
+    "latestDecisionAt": "2026-09-07T11:55:05.588079Z"
   },
   "deploymentEvents": {
     "bootstrapChampion": 31,
@@ -28,46 +28,47 @@
     "latestAt": "2026-09-04T16:07:01.847035Z"
   },
   "paperSummary": [
-    { "mode": "agressivo (legado)", "trades": 2615, "evNetPerTrade": -0.1336, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0386, "maxDrawdown": 367.81 },
-    { "mode": "conservador (legado)", "trades": 2615, "evNetPerTrade": -0.1336, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0386, "maxDrawdown": 367.81 },
-    { "mode": "neutro (legado)", "trades": 2615, "evNetPerTrade": -0.1336, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0386, "maxDrawdown": 367.81 }
+    { "mode": "agressivo (legado)", "trades": 2654, "evNetPerTrade": -0.1319, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0369, "maxDrawdown": 367.81 },
+    { "mode": "conservador (legado)", "trades": 2654, "evNetPerTrade": -0.1319, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0369, "maxDrawdown": 367.81 },
+    { "mode": "neutro (legado)", "trades": 2647, "evNetPerTrade": -0.1331, "benchmarkEvPerTrade": -0.0950, "edgeVsBenchmark": -0.0381, "maxDrawdown": 367.81 }
   ],
   "currentPaperSummary": {
     "policy": "single",
     "operationCost": 0,
-    "trades": 7156,
+    "trades": 10627,
     "benchmarkEvPerTrade": -0.0750,
-    "evNetPerTrade": -0.1099,
-    "edgeVsBenchmark": -0.0349,
-    "maxDrawdown": 795.15
+    "evNetPerTrade": -0.1144,
+    "edgeVsBenchmark": -0.0394,
+    "maxDrawdown": 1223.45
   },
   "systemHealth": {
     "status": "ok",
     "processedAsset": "USDJPY=X",
     "timeframe": "M5",
-    "resolvedProspectiveSignals": 15111,
-    "updatedAt": "2026-09-05T13:11:03.370Z"
+    "resolvedProspectiveSignals": 18585,
+    "updatedAt": "2026-09-07T11:54:09.616Z"
   },
-  "regimeSnapshots": 1255,
+  "regimeSnapshots": 4743,
   "naiveBaselines": [
-    { "strategy": "market_analyzer", "trades": 7156, "winRatePct": 48.11, "evPerOpportunity": -0.1099 },
-    { "strategy": "always_buy", "trades": 7156, "winRatePct": 49.29, "evPerOpportunity": -0.0882 },
-    { "strategy": "always_sell", "trades": 7156, "winRatePct": 46.03, "evPerOpportunity": -0.1484 },
-    { "strategy": "last_closed_candle", "trades": 6833, "winRatePct": 46.64, "evPerOpportunity": -0.1309 },
-    { "strategy": "random_50_expected", "trades": 7156, "winRatePct": 50.00, "evPerOpportunity": -0.0750 }
+    { "strategy": "market_analyzer", "trades": 10627, "winRatePct": 47.87, "evPerOpportunity": -0.1144 },
+    { "strategy": "always_buy", "trades": 10627, "winRatePct": 48.97, "evPerOpportunity": -0.0941 },
+    { "strategy": "always_sell", "trades": 10627, "winRatePct": 46.63, "evPerOpportunity": -0.1374 },
+    { "strategy": "last_closed_candle", "trades": 10169, "winRatePct": 47.02, "evPerOpportunity": -0.1246 },
+    { "strategy": "random_50_expected", "trades": 10627, "winRatePct": 50.00, "evPerOpportunity": -0.0750 }
   ],
   "gradeCalibration": [
-    { "grade": "A+", "trades": 516, "winRatePct": 51.16, "wilsonLowerPct": 46.86, "wilsonUpperPct": 55.45, "evPerTrade": -0.0535 },
-    { "grade": "A", "trades": 1178, "winRatePct": 42.95, "wilsonLowerPct": 40.15, "wilsonUpperPct": 45.80, "evPerTrade": -0.2053 },
-    { "grade": "B", "trades": 1887, "winRatePct": 45.84, "wilsonLowerPct": 43.60, "wilsonUpperPct": 48.09, "evPerTrade": -0.1520 },
-    { "grade": "C", "trades": 2269, "winRatePct": 49.05, "wilsonLowerPct": 47.00, "wilsonUpperPct": 51.11, "evPerTrade": -0.0925 },
-    { "grade": "D", "trades": 1306, "winRatePct": 53.22, "wilsonLowerPct": 50.50, "wilsonUpperPct": 55.91, "evPerTrade": -0.0155 }
+    { "grade": "A+", "trades": 738, "winRatePct": 49.73, "wilsonLowerPct": 46.13, "wilsonUpperPct": 53.33, "evPerTrade": -0.0800 },
+    { "grade": "A", "trades": 1835, "winRatePct": 43.32, "wilsonLowerPct": 41.07, "wilsonUpperPct": 45.60, "evPerTrade": -0.1985 },
+    { "grade": "B", "trades": 2795, "winRatePct": 45.80, "wilsonLowerPct": 43.96, "wilsonUpperPct": 47.65, "evPerTrade": -0.1528 },
+    { "grade": "C", "trades": 3327, "winRatePct": 49.20, "wilsonLowerPct": 47.51, "wilsonUpperPct": 50.90, "evPerTrade": -0.0897 },
+    { "grade": "D", "trades": 1932, "winRatePct": 52.17, "wilsonLowerPct": 49.94, "wilsonUpperPct": 54.39, "evPerTrade": -0.0348 }
   ],
   "strategyLab": {
-    "opportunities": 1242,
-    "distinctDays": 2,
+    "opportunities": 4717,
+    "distinctDays": 4,
     "reviewMinimumOpportunities": 500,
     "reviewMinimumDays": 20,
     "reviewReady": false
-  }
+  },
+  "gradeAContextGroups": 118
 }

@@ -1,5 +1,16 @@
 # Status verificado da implantação
 
+## Atualização de 07/09/2026 — empate causal por janela e contexto da nota A
+
+- Produção Supabase possui 33 migrations; `train-challenger` v7 está `ACTIVE` com `verify_jwt=true`.
+- A validação de modelo v4 eliminou a taxa de empate global no walk-forward. Cada janela usa somente outcomes anteriores ao próprio `trainTo`, com suavização de Laplace; o artefato final também usa apenas o treino principal.
+- Um teste de regressão anexa empates em datas futuras e prova que as três taxas históricas e a taxa do artefato permanecem idênticas.
+- A migration `033` publicou `cloud_grade_a_session_diagnostics`, agregando a nota A por ativo, timeframe, direção, sessão/hora UTC, fonte, idade e latência do dado.
+- A visão é somente leitura, `security_invoker + security_barrier`; `anon` e `authenticated` continuam sem acesso ao ledger privado.
+- No corte de 07/09, a visão retornou 118 grupos com pelo menos cinco resultados. Esses grupos aparecem no frontend para investigação e não realimentam ranking, score, direção, qualidade ou promoção.
+- A bateria local passou 32/32 testes do motor; os contratos estáticos de estratégia e frontend também passaram.
+- O documento antigo `CLAUDE-COMBINED-REVIEW.md` foi preservado em `docs/archive/CLAUDE-COMBINED-REVIEW-2026-08-30.md`, claramente marcado como histórico.
+
 ## Atualização de 05/09/2026 — diagnóstico estatístico e robustez
 
 - Produção Supabase possui 32 migrations; `market-cycle` v13 e `train-challenger` v6 estão ativos com `verify_jwt=true`.

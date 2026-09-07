@@ -759,8 +759,9 @@ function renderCloudStrategyLab(snapshot) {
 function renderCloudStatisticalDiagnostics(snapshot) {
   const baselineBody = $('#cloudNaiveBaselineRows');
   const gradeBody = $('#cloudGradeCalibrationRows');
+  const gradeASessionBody = $('#cloudGradeASessionRows');
   const notice = $('#cloudDiagnosticNotice');
-  if (!baselineBody || !gradeBody) return;
+  if (!baselineBody || !gradeBody || !gradeASessionBody) return;
 
   const baselineLabels = {
     market_analyzer: 'Market Analyzer',
@@ -788,6 +789,24 @@ function renderCloudStatisticalDiagnostics(snapshot) {
           ? `${evValue > randomEv ? 'acima' : evValue < randomEv ? 'abaixo' : 'igual'} ao acaso nessa amostra`
           : 'diagnóstico retrospectivo';
       return `<tr><td data-label="Referência"><b>${escapeHtml(baselineLabels[row.strategy] || row.strategy || '—')}</b></td><td data-label="Cobertura">${escapeHtml(coverage)}<small>${trades.toLocaleString('pt-BR')} / ${opportunities.toLocaleString('pt-BR')} oportunidades</small></td><td data-label="Taxa">${escapeHtml(winRate)}</td><td data-label="EV por oportunidade">${escapeHtml(ev)}</td><td data-label="Leitura">${escapeHtml(comparison)}</td></tr>`;
+    }).join('');
+  }
+
+  const gradeASessions = snapshot && Array.isArray(snapshot.gradeASessions) ? snapshot.gradeASessions : [];
+  if (!gradeASessions.length) {
+    gradeASessionBody.innerHTML = '<tr><td colspan="8" class="empty-row empty-awaiting">Aguardando ao menos 5 resultados A no mesmo contexto.</td></tr>';
+  } else {
+    gradeASessionBody.innerHTML = gradeASessions.slice(0, 20).map(row => {
+      const trades = Math.max(0, Math.round(Number(row.trades) || 0));
+      const winRate = cloudNumber(row.win_rate) === null ? '—' : fmtPct(Number(row.win_rate) * 100);
+      const ev = cloudNumber(row.ev_per_trade) === null ? '—' : cloudMoney(Number(row.ev_per_trade), { signed: true });
+      const hour = Number.isFinite(Number(row.utc_hour)) ? `${String(Number(row.utc_hour)).padStart(2, '0')}:00 UTC` : '—';
+      const source = String(row.source || 'indefinido').toUpperCase();
+      const direction = String(row.direction || '').toLowerCase() === 'buy' ? 'COMPRA'
+        : String(row.direction || '').toLowerCase() === 'sell' ? 'VENDA' : 'AGUARDAR';
+      const dataAge = cloudNumber(row.avg_data_age_ms) === null ? '—' : `${fmt(Number(row.avg_data_age_ms) / 1000, 1)}s`;
+      const latency = cloudNumber(row.avg_source_latency_ms) === null ? '—' : `${fmt(Number(row.avg_source_latency_ms) / 1000, 1)}s`;
+      return `<tr><td data-label="Ativo / tempo"><b>${escapeHtml(row.symbol || '—')}</b><small>${escapeHtml(row.timeframe || '—')}</small></td><td data-label="Direção">${escapeHtml(direction)}</td><td data-label="Sessão / hora">${escapeHtml(row.utc_session || '—')}<small>${escapeHtml(hour)}</small></td><td data-label="Fonte">${escapeHtml(source)}</td><td data-label="Idade do dado">${escapeHtml(row.data_age_bucket || '—')}<small>média ${escapeHtml(dataAge)}</small></td><td data-label="Latência">${escapeHtml(row.latency_bucket || '—')}<small>média ${escapeHtml(latency)}</small></td><td data-label="Amostra / taxa">${trades.toLocaleString('pt-BR')}<small>${escapeHtml(winRate)} de acerto</small></td><td data-label="EV por sinal">${escapeHtml(ev)}</td></tr>`;
     }).join('');
   }
 
@@ -935,7 +954,7 @@ async function refreshCloudMonitor({ manual = false } = {}) {
     const previous = state.cloud.snapshot;
     const fallback = previous
       ? { ...previous, configured: true, status: 'offline', fromCache: true }
-      : { configured: true, status: 'offline', fromCache: false, canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], strategyLab: [], naiveBaselines: [], gradeCalibration: [], paper: null, health: null };
+      : { configured: true, status: 'offline', fromCache: false, canonicalSignals: [], latestDecisions: [], opportunities: [], gradeHistory: [], metrics: [], qualityMetrics: [], qualityPaper: [], strategyLab: [], naiveBaselines: [], gradeCalibration: [], gradeASessions: [], paper: null, health: null };
     state.cloud.snapshot = fallback;
     renderCloudMonitor(fallback, { loading: false });
   } finally {

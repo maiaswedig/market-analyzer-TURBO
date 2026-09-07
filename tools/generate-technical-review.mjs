@@ -139,6 +139,7 @@ O contrato automatizado \`supabase/tests/confirmed_quality_contract.sql\` també
 - O calendário econômico é arquivado de forma append-only e consultado \`as-of\`; revisões futuras não aparecem no passado.
 - Ranking real, ranking de backtest, histórico local e histórico cloud permanecem separados.
 - Empates continuam no denominador e seguem uma única política econômica versionada.
+- Desde a validação de modelo v4, cada janela walk-forward calcula sua taxa de empate somente com os outcomes anteriores ao próprio fim do treino, usando suavização de Laplace. Empates futuros não participam do gate de EV de janelas antigas.
 
 ## 6. Timeframes, fontes e limites operacionais
 
@@ -173,9 +174,9 @@ O teste \`test:technical-review\` falha se este documento divergir do gerador, s
 - O arquivo de calendário precisa acumular meses antes de sustentar conclusões históricas fortes.
 - Atualize o snapshot com consultas somente leitura antes de publicar uma nova afirmação numérica.
 
-## 11. Diagnóstico estatístico adicionado em 05/09/2026
+## 11. Diagnóstico estatístico atualizado em 07/09/2026
 
-As migrations 029–032 criam um laboratório prospectivo separado e diagnósticos retrospectivos somente de leitura. Nenhum deles altera pesos, direção, qualidade, modelo ou histórico.
+As migrations 029–033 criam um laboratório prospectivo separado e diagnósticos retrospectivos somente de leitura. Nenhum deles altera pesos, direção, qualidade, modelo ou histórico.
 
 ### Regras ingênuas na mesma amostra resolvida
 
@@ -197,6 +198,8 @@ O classificador causal de regime já foi anexado a **${snapshot.regimeSnapshots}
 
 O benchmark prospectivo foi corrigido para a mesma cobertura de cada braço: quando o braço aguarda, o controle aleatório também aguarda. Assim, um braço que sempre fica parado não pode aparentar vantagem apenas por evitar o payout negativo.
 
+A migration 033 acrescenta um diagnóstico somente leitura da nota A por sessão UTC, hora, fonte, idade e latência do dado. O snapshot encontrou **${snapshot.gradeAContextGroups} grupos** com pelo menos cinco resultados. Eles ajudam a localizar problemas de sessão/feed, mas não reajustam pesos nem alteram sinais.
+
 ## 12. Arquivos prioritários para nova revisão
 
 - \`supabase/migrations/202608310026_decouple_confirmed_quality.sql\`
@@ -206,10 +209,13 @@ O benchmark prospectivo foi corrigido para a mesma cobertura de cada braço: qua
 - \`supabase/migrations/202609040030_fix_and_expand_strategy_controls.sql\`
 - \`supabase/migrations/202609040031_statistical_diagnostics_and_regime.sql\`
 - \`supabase/migrations/202609050032_coverage_matched_strategy_benchmark.sql\`
+- \`supabase/migrations/202609070033_causal_tie_rate_and_grade_a_sessions.sql\`
 - \`supabase/tests/confirmed_quality_contract.sql\`
 - \`supabase/tests/single_policy_contract.sql\`
 - \`supabase/functions/market-cycle/index.ts\`
 - \`supabase/functions/_shared/features.ts\`
+- \`supabase/functions/_shared/logistic.ts\`
+- \`supabase/functions/train-challenger/index.ts\`
 - \`js/signal-ai.js\`
 - \`js/score.js\`
 - \`js/backtest.js\`

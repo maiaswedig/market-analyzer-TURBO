@@ -5,7 +5,7 @@ Data: 30/08/2026
 ## Contexto
 
 A auditoria anterior aprovou as dez perguntas do
-`CLAUDE-COMBINED-REVIEW.md` e deixou uma observação: o calendário era arquivado,
+`docs/archive/CLAUDE-COMBINED-REVIEW-2026-08-30.md` (revisão histórica arquivada) e deixou uma observação: o calendário era arquivado,
 mas ainda não era lido pelo backtest/treino. Esta rodada fecha a leitura causal
 no backtest sem dar poder automático ao calendário e sem alterar produção.
 

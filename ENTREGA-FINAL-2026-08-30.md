@@ -30,7 +30,7 @@ Data: 30/08/2026
 
 ## Começar a revisão
 
-1. Leia `CLAUDE-COMBINED-REVIEW.md` para a rodada anterior.
+1. Consulte `docs/archive/CLAUDE-COMBINED-REVIEW-2026-08-30.md` apenas como histórico da rodada anterior.
 2. Leia `CLAUDE-FINAL-CALENDAR-REPLAY-REVIEW.md` para o delta final.
 3. Confira `docs/IMPLEMENTACAO-REPLAY-CALENDARIO-CAUSAL-2026-08-30.md` para o
    desenho, as garantias e os limites.

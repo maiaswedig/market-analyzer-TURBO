@@ -6,12 +6,14 @@ set local role anon;
 select * from public.cloud_single_naive_baselines limit 0;
 select * from public.cloud_single_grade_calibration limit 0;
 select * from public.cloud_grade_a_diagnostics limit 0;
+select * from public.cloud_grade_a_session_diagnostics limit 0;
 reset role;
 
 set local role authenticated;
 select * from public.cloud_single_naive_baselines limit 0;
 select * from public.cloud_single_grade_calibration limit 0;
 select * from public.cloud_grade_a_diagnostics limit 0;
+select * from public.cloud_grade_a_session_diagnostics limit 0;
 reset role;
 
 do $test$
@@ -22,11 +24,13 @@ declare
   v_baselines text;
   v_options text;
   v_view text;
+  v_grade_session text;
 begin
   select pg_catalog.pg_get_functiondef('public.register_market_decision(jsonb)'::pg_catalog.regprocedure) into v_wrapper;
   select pg_catalog.pg_get_functiondef('signal_atlas.attach_causal_regime_snapshot()'::pg_catalog.regprocedure) into v_trigger;
   select pg_catalog.pg_get_functiondef('signal_atlas.cloud_single_grade_calibration_rows()'::pg_catalog.regprocedure) into v_grade;
   select pg_catalog.pg_get_functiondef('signal_atlas.cloud_single_naive_baselines_rows()'::pg_catalog.regprocedure) into v_baselines;
+  select pg_catalog.pg_get_functiondef('signal_atlas.cloud_grade_a_session_diagnostic_rows()'::pg_catalog.regprocedure) into v_grade_session;
 
   if v_wrapper !~* 'set_config[^;]+signal_atlas\.decision_regime' or v_wrapper !~* 'invalid market regime' then
     raise exception 'diagnostics contract: registration wrapper does not validate/pass the regime';
@@ -46,11 +50,24 @@ begin
      or v_baselines ~* 'update\s+signal_atlas\.model_artifacts' then
     raise exception 'diagnostics contract: read-only diagnosis mutates a model';
   end if;
+  if v_grade_session !~* 'decision_at at time zone ''UTC'''
+     or v_grade_session !~* 'data_age_ms'
+     or v_grade_session !~* 'source_latency_ms'
+     or v_grade_session !~* 'data_lineage'
+     or v_grade_session !~* 'resolved_at >= d\.expiry_at'
+     or v_grade_session !~* 'correction_type = ''invalidate''' then
+    raise exception 'diagnostics contract: grade-A session/provider/latency diagnosis is incomplete';
+  end if;
+  if v_grade_session ~* 'update\s+signal_atlas\.model_artifacts'
+     or v_grade_session ~* 'insert\s+into\s+signal_atlas\.decision_events' then
+    raise exception 'diagnostics contract: grade-A context diagnosis is not read-only';
+  end if;
 
   foreach v_view in array array[
     'cloud_single_naive_baselines',
     'cloud_single_grade_calibration',
-    'cloud_grade_a_diagnostics'
+    'cloud_grade_a_diagnostics',
+    'cloud_grade_a_session_diagnostics'
   ] loop
     select coalesce(c.reloptions::text, '') into v_options
     from pg_catalog.pg_class c
