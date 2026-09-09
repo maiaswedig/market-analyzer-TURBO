@@ -408,13 +408,10 @@ Deno.serve((request) => handleFunction(request, async () => {
       p_run_id: runId,
     })
     : null;
-  const reviewAsOf = Date.now();
-  const promotion = await requiredRpc(client, "review_and_promote_challengers", {
-    p_as_of: iso(reviewAsOf),
-    p_min_resolved: 500,
-    // The database stores explicit 95% confidence bounds for promotion.
-    p_z_margin: 1.96,
-  });
+  // Promotion review is deliberately not run in the minute-by-minute scanner.
+  // review-models checks one scope every five minutes independently of training.
+  // train-challenger also reviews its own scope after creating an artifact.
+  // This bounds routine review load while preserving all statistical gates.
   const scopeErrors = results
     .filter((result) => !!result.error)
     .map((result) => ({
@@ -481,7 +478,6 @@ Deno.serve((request) => handleFunction(request, async () => {
     resolution,
     gapBackfill,
     recoveredResolution,
-    promotion,
     calendar: calendar ? { fetchedAt: iso(calendar.fetchedAt), events: calendar.events?.length ?? null, error: calendar.error } : null,
     calendarArchive,
   };
