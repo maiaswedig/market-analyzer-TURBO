@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:candle-reader": "node --experimental-strip-types tools/verify-candle-reader.mjs",
     "test:review-schedule": "node --experimental-strip-types tools/verify-review-schedule.mjs",
     "test:edge": "node --experimental-strip-types tools/run-edge-tests-node.mjs",
     "test:causality": "node tools/verify-local-causality.mjs",

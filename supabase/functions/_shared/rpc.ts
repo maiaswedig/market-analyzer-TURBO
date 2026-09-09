@@ -3,7 +3,9 @@ import type { AdminClient } from "./supabase.ts";
 export async function requiredRpc<T = unknown>(client: AdminClient, name: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await client.rpc(name, args);
   if (error) {
-    throw new Error(`RPC ${name} indisponível ou recusou o contrato: ${error.message}`);
+    const detail = name === "ingest_candles" && error.message.includes("future candle/source timestamp rejected")
+      ? ` · ${String(error.details || "sem detalhe temporal").slice(0, 600)}` : "";
+    throw new Error(`RPC ${name} indisponível ou recusou o contrato: ${error.message}${detail}`);
   }
   return data as T;
 }

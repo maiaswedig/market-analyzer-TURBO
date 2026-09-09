@@ -1,6 +1,7 @@
 import { iso, parseTime } from "./time.ts";
 import type { AdminClient } from "./supabase.ts";
 import { requiredRpc } from "./rpc.ts";
+import { readCandlePage } from "./candle-reader.ts";
 import type { Candle, LogisticArtifact, StoredModel, Timeframe, WatchAsset } from "./types.ts";
 
 function numeric(value: unknown): number | null {
@@ -18,16 +19,8 @@ function decodeArtifact(value: unknown): LogisticArtifact | null {
 }
 
 export async function latestClosedOpen(client: AdminClient, symbol: string, timeframe: Timeframe): Promise<number | null> {
-  const { data, error } = await client.from("candles")
-    .select("open_time")
-    .eq("symbol", symbol)
-    .eq("timeframe", timeframe)
-    .eq("is_closed", true)
-    .order("open_time", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(`Falha ao localizar o último candle ${symbol} ${timeframe}: ${error.message}`);
-  return parseTime(data?.open_time);
+  const rows = await readCandlePage(client, symbol, timeframe, 1);
+  return parseTime(rows[0]?.open_time);
 }
 
 export async function loadClosedCandles(client: AdminClient, asset: WatchAsset, timeframe: Timeframe, limit = 3_500): Promise<Candle[]> {
@@ -37,17 +30,11 @@ export async function loadClosedCandles(client: AdminClient, asset: WatchAsset, 
   // menor que a declarada e mantém a divisão cronológica auditável.
   const pageSize = 1_000;
   const rows: Array<Record<string, unknown>> = [];
+  let before: string | null = null;
   for (let offset = 0; offset < requested; offset += pageSize) {
     const take = Math.min(pageSize, requested - offset);
-    const { data, error } = await client.from("candles")
-      .select("symbol,timeframe,open_time,open,high,low,close,volume,source,is_closed,inserted_at")
-      .eq("symbol", asset.symbol)
-      .eq("timeframe", timeframe)
-      .eq("is_closed", true)
-      .order("open_time", { ascending: false })
-      .range(offset, offset + take - 1);
-    if (error) throw new Error(`Falha ao ler candles fechados ${asset.symbol} ${timeframe}: ${error.message}`);
-    const page = (data || []) as Array<Record<string, unknown>>;
+    const page = await readCandlePage(client, asset.symbol, timeframe, take, offset, before);
+    if (offset === 0 && page.length) before = String(page[0].open_time);
     rows.push(...page);
     if (page.length < take) break;
   }
