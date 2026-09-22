@@ -562,7 +562,7 @@ function cloudCriteriaDetails(reference, fallback) {
 }
 
 function canonicalCloudRecord(snapshot) {
-  const opportunities = snapshot && Array.isArray(snapshot.opportunities) ? snapshot.opportunities : [];
+  const opportunities = snapshot && !(snapshot.staleSections || []).includes('opportunities') && Array.isArray(snapshot.opportunities) ? snapshot.opportunities : [];
   const canonical = snapshot && Array.isArray(snapshot.canonicalSignals) ? snapshot.canonicalSignals : [];
   const canonicalById = new Map(canonical.filter(Boolean).map(item => [item.id, item]));
   const enrich = item => item ? { ...item, ...(canonicalById.get(item.id) || {}) } : null;
@@ -587,8 +587,9 @@ function renderOfficialCloudSignal(snapshot) {
   const openButton = $('#officialSignalOpen');
   if (!record) {
     card.className = 'panel official-signal-card waiting';
-    $('#officialSignalName').textContent = snapshot && snapshot.configured ? 'Aguardando decisão oficial' : 'Backend ainda não conectado';
-    $('#officialSignalTime').textContent = 'Nenhuma decisão cloud foi publicada pela política atual.';
+    const unavailable = snapshot && snapshot.configured && (snapshot.canonicalStatus === 'unavailable' || snapshot.status === 'offline' || (snapshot.errors || []).some(error => error.startsWith('canonical:')));
+    $('#officialSignalName').textContent = unavailable ? 'Consulta oficial indisponível' : snapshot && snapshot.configured ? 'Aguardando decisão oficial' : 'Backend ainda não conectado';
+    $('#officialSignalTime').textContent = unavailable ? 'Não foi possível consultar o sinal oficial. Uma nova tentativa será feita automaticamente.' : 'Nenhuma decisão cloud foi retornada nesta consulta.';
     $('#officialSignalQuality').textContent = snapshot && snapshot.fromCache ? 'Cache indisponível' : 'Aguardando';
     setGradeBadge($('#officialSignalGrade'), null);
     $('#officialSignalDirection').className = 'direction neutral';
@@ -608,7 +609,7 @@ function renderOfficialCloudSignal(snapshot) {
   const directionText = record.verdict === 'CALL' ? 'COMPRA' : record.verdict === 'PUT' ? 'VENDA' : 'AGUARDAR';
   const asset = getAsset(record.symbol);
   const isUpcoming = Number.isFinite(Number(record.entryAt)) && Date.now() < Number(record.entryAt);
-  const isCached = !!(snapshot && snapshot.fromCache);
+  const isCached = !!(snapshot && (snapshot.fromCache || snapshot.canonicalStatus === 'stale'));
   const contractVersion = Number(record.qualityContractVersion) || 0;
   const isCurrentQualityContract = contractVersion >= 4;
   const displayQuality = isCurrentQualityContract ? record.quality : 'REFERENCIA';
@@ -894,6 +895,12 @@ function renderCloudMonitor(snapshot = state.cloud.snapshot, { loading = state.c
   } else if (configured) {
     visualState = 'offline'; label = 'Nuvem indisponível'; detailText = 'Nuvem indisponível · modo local ativo.';
   }
+  if (snapshot && snapshot.diagnosticsFetchedAt) {
+    detailText += ` Diagnósticos consultados em ${cloudDateTime(snapshot.diagnosticsFetchedAt)}.`;
+  }
+  if (snapshot && snapshot.staleSections && snapshot.staleSections.length) {
+    detailText += ' Algumas seções exibem dados anteriores; confira a data de cada registro.';
+  }
   panel.dataset.state = visualState;
   badge.textContent = label;
   detail.textContent = detailText;
@@ -943,12 +950,21 @@ async function refreshCloudMonitor({ manual = false } = {}) {
   renderCloudMonitor(state.cloud.snapshot, { loading: true });
   try {
     const requestedMode = state.mode;
-    const snapshot = await loadCloudDashboard({ limit: 16, timeoutMs: 5000, mode: requestedMode });
+    const snapshot = await loadCloudDashboard({ limit: 16, mode: requestedMode, includeDiagnostics: false, previousSnapshot: state.cloud.snapshot });
     // Snapshot remoto vive apenas neste ramo de UI; ele nunca é anexado a
     // state.feedback, state.result, modelos, rankings ou mensagens do Worker.
     if (requestedMode === state.mode) {
       state.cloud.snapshot = snapshot;
       renderCloudMonitor(snapshot, { loading: false });
+      // Publish the live card immediately. Diagnostics refresh at most every
+      // five minutes while their panel is open, or on an explicit refresh.
+      if (manual || ($('#workspaceDetails')?.open && Date.now() - (snapshot.diagnosticsFetchedAt || 0) >= 300_000)) {
+        const detailed = await loadCloudDashboard({ limit: 16, mode: requestedMode, previousSnapshot: snapshot });
+        if (requestedMode === state.mode) {
+          state.cloud.snapshot = detailed;
+          renderCloudMonitor(detailed, { loading: false });
+        }
+      }
     }
   } catch (_) {
     const previous = state.cloud.snapshot;
@@ -969,6 +985,9 @@ function initializeCloudMonitor() {
   renderCloudMonitor(null, { loading: false });
   refreshCloudMonitor();
   window.addEventListener('online', () => refreshCloudMonitor());
+  $('#workspaceDetails')?.addEventListener('toggle', () => {
+    if ($('#workspaceDetails').open && Date.now() - (state.cloud.snapshot?.diagnosticsFetchedAt || 0) >= 300_000) refreshCloudMonitor();
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible' || !cloudIsConfigured()) return;
     const last = Number(state.cloud.snapshot && state.cloud.snapshot.fetchedAt || state.cloud.lastAttemptAt || 0);

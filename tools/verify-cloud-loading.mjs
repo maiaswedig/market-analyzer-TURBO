@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import { loadCloudDashboard } from '../js/cloud-api.js';
+globalThis.SIGNAL_ATLAS_CLOUD_CONFIG = {url:'https://example.supabase.co',publishableKey:'test-public-key'};
+const row={id:'official-1',symbol:'BTCUSDT',timeframe:'M5',quality:'technical',direction:'buy',decision_at:'2026-09-21T12:00:00Z'};
+let requests=[],active=0,maxActive=0,failCanonical=false,emptyCanonical=false;
+globalThis.fetch=async url=>{
+  const view=new URL(url).pathname.split('/').pop();requests.push(view);active++;maxActive=Math.max(active,maxActive);
+  await new Promise(resolve=>setTimeout(resolve,2));active--;
+  if(view==='cloud_canonical_signals' && failCanonical) throw new Error('network down');
+  return {ok:true,json:async()=>view==='cloud_canonical_signals'?(emptyCanonical?[]:[row]):view==='cloud_system_health'?[{status:'ok'}]:[]};
+};
+const core=await loadCloudDashboard({includeDiagnostics:false});
+assert.deepEqual(requests.sort(),['cloud_canonical_signals','cloud_system_health']);
+assert.equal(core.canonicalStatus,'fresh');assert.equal(core.canonicalSignals[0].quality,'TECNICO');
+requests=[];
+const complete=await loadCloudDashboard({previousSnapshot:core});
+assert.equal(requests.length,14);assert.ok(maxActive<=2,'at most two concurrent database reads');
+failCanonical=true;
+const partial=await loadCloudDashboard({includeDiagnostics:false,previousSnapshot:complete});
+assert.equal(partial.canonicalStatus,'stale');assert.equal(partial.canonicalSignals[0].id,row.id);
+const noCache=await loadCloudDashboard({includeDiagnostics:false});
+assert.equal(noCache.canonicalStatus,'unavailable');assert.equal(noCache.canonicalSignals.length,0);
+failCanonical=false;emptyCanonical=true;
+const empty=await loadCloudDashboard({includeDiagnostics:false,previousSnapshot:complete});
+assert.equal(empty.canonicalStatus,'empty');assert.equal(empty.canonicalSignals.length,0,'a successful empty response clears previous decisions');
+console.log('Cloud loading: essential-first, concurrency, technical quality, stale fallback and empty response: OK');
