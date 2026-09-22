@@ -5,7 +5,7 @@ import { getKv, setKv } from './persistence.js';
 
 const CACHE_KEY = 'signal_atlas_cloud_snapshot_v5';
 const FALLBACK_STORAGE_KEY = 'signal_atlas_cloud_snapshot_v5';
-const DEFAULT_TIMEOUT_MS = 5000;
+const DEFAULT_TIMEOUT_MS = 8000;
 
 function text(value) {
   return value === null || value === undefined ? '' : String(value).trim();
@@ -53,7 +53,7 @@ function normalizeDirection(value) {
 function normalizeQuality(value) {
   const quality = text(value).toUpperCase();
   if (/CONFIRM|APROV|VALID/.test(quality)) return 'CONFIRMADO';
-  if (/TECN|FRACA|LOW_STAT/.test(quality)) return 'TECNICO';
+  if (/TECH|TECN|FRACA|LOW_STAT/.test(quality)) return 'TECNICO';
   if (/BAIX|LOW|INFORM|WAIT|AGUARD/.test(quality)) return 'BAIXA';
   return 'REFERENCIA';
 }
@@ -362,7 +362,7 @@ export async function loadCausalCalendarReplay(points, {
   return { configured: true, requested: clean.length, covered, snapshots: ordered, errors };
 }
 
-export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeoutMs = DEFAULT_TIMEOUT_MS, mode = 'neutro' } = {}) {
+export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeoutMs = DEFAULT_TIMEOUT_MS, mode = 'neutro', includeDiagnostics = true, previousSnapshot = null } = {}) {
   const cfg = configured();
   const selectedMode = normalizeMode(mode);
   if (!cfg.enabled) {
@@ -398,20 +398,32 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
     ['gradeASessions', 'cloud_grade_a_session_diagnostics', { select: '*', order: 'trades.desc', limit: 80 }],
     ['health', 'cloud_system_health', { select: '*', limit: 1 }]
   ];
-  const settled = await Promise.allSettled(calls.map(([, view, params]) => request(endpoint(base, view, params), cfg.publishableKey, timeoutMs)));
+  // Fetch the live signal first; never fan out fourteen expensive views at once.
+  const selectedCalls = includeDiagnostics ? calls : calls.filter(([name]) => ['canonical', 'health'].includes(name));
+  const settled = new Array(selectedCalls.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < selectedCalls.length) {
+      const index = cursor++;
+      const [, view, params] = selectedCalls[index];
+      try { settled[index] = { status: 'fulfilled', value: await request(endpoint(base, view, params), cfg.publishableKey, timeoutMs) }; }
+      catch (reason) { settled[index] = { status: 'rejected', reason }; }
+    }
+  }
+  await Promise.all([worker(), worker()]);
   const payload = {};
   const errors = [];
   settled.forEach((result, index) => {
-    const name = calls[index][0];
+    const name = selectedCalls[index][0];
     if (result.status === 'fulfilled') payload[name] = result.value;
     else errors.push(`${name}: ${result.reason && result.reason.name === 'AbortError' ? 'tempo esgotado' : 'indisponível'}`);
   });
   const successful = settled.filter(result => result.status === 'fulfilled').length;
+  const cached = previousSnapshot || await readCache(selectedMode);
 
   if (!successful) {
-    const cached = await readCache(selectedMode);
     if (cached && typeof cached === 'object') {
-      return { ...cached, configured: true, status: 'offline', fromCache: true, errors };
+      return { ...cached, configured: true, status: 'offline', fromCache: true, canonicalStatus: 'stale', errors };
     }
     return {
       configured: true, status: 'offline', fromCache: false, fetchedAt: null, mode: selectedMode,
@@ -446,7 +458,7 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
   const snapshot = {
     configured: true,
     mode: selectedMode,
-    status: successful === calls.length ? 'online' : 'partial',
+    status: successful === selectedCalls.length ? 'online' : 'partial',
     fromCache: false,
     fetchedAt: Date.now(),
     canonicalSignals,
@@ -464,6 +476,23 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
     health,
     errors
   };
+  // Keep the last successful section on failure, but mark it stale. An actual
+  // successful empty response must clear old rows instead of reviving cache.
+  const fields = {canonical:'canonicalSignals', latest:'latestDecisions', opportunities:'opportunities',
+    gradeHistory:'gradeHistory', metrics:'metrics', qualityMetrics:'qualityMetrics', paper:'paper',
+    qualityPaper:'qualityPaper', strategyLab:'strategyLab', naiveBaselines:'naiveBaselines',
+    gradeCalibration:'gradeCalibration', gradeASessions:'gradeASessions', health:'health'};
+  snapshot.staleSections = [];
+  for (const [name, field] of Object.entries(fields)) {
+    if (!Object.hasOwn(payload, name) && cached && Object.hasOwn(cached, field)) {
+      snapshot[field] = cached[field];
+      snapshot.staleSections.push(name);
+    }
+  }
+  snapshot.canonicalStatus = Object.hasOwn(payload, 'canonical')
+    ? (canonicalSignals.length ? 'fresh' : 'empty')
+    : snapshot.canonicalSignals.length ? 'stale' : 'unavailable';
+  snapshot.diagnosticsFetchedAt = includeDiagnostics ? Date.now() : cached?.diagnosticsFetchedAt || null;
   await writeCache(snapshot, selectedMode);
   return snapshot;
 }
