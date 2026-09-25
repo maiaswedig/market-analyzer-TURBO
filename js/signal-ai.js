@@ -728,6 +728,8 @@ function renderCloudStrategyLab(snapshot) {
   if (!target) return;
   const rows = snapshot && Array.isArray(snapshot.strategyLab) ? snapshot.strategyLab : [];
   const definitions = [
+    { key: 'quality_control', label: 'Experimento · estratégia atual' },
+    { key: 'quality_filtered', label: 'Experimento · filtro de qualidade' },
     { key: 'technical_current', label: 'Direção atual' },
     { key: 'technical_inverse', label: 'Direção oposta · controle' },
     { key: 'grade_a_or_a_plus', label: 'Somente A/A+' },
@@ -748,10 +750,12 @@ function renderCloudStrategyLab(snapshot) {
     const benchmarkValue = cloudNumber(row.coverage_matched_random_ev) ?? cloudNumber(row.random_benchmark_ev);
     const benchmark = benchmarkValue === null ? '—' : cloudMoney(benchmarkValue, { signed: true });
     const winRate = cloudNumber(row.win_rate) === null ? '—' : fmtPct(Number(row.win_rate) * 100);
-    const ready = row.review_ready === true;
+    const experiment = item.key.startsWith('quality_');
+    const filteredTrades = Number(rows.find(value => value.arm === 'quality_filtered')?.trades) || 0;
+    const ready = row.review_ready === true && (!experiment || filteredTrades >= 100);
     const passed = row.beats_random_conservatively === true;
     const tone = ready ? (passed ? 'is-positive' : 'is-negative') : 'is-empty';
-    const verdict = !ready ? `coletando · ${opportunities}/500 · ${days}/20 dias`
+    const verdict = !ready ? `coletando · ${opportunities}/500 · ${days}/20 dias${experiment ? ` · ${filteredTrades}/100 operações filtradas` : ''}`
       : passed ? 'superou o acaso com margem conservadora' : 'não superou o acaso com segurança';
     return `<div class="cloud-quality-card ${tone}"><span>${escapeHtml(item.label)}</span><b>${escapeHtml(winRate)} · EV/oportunidade ${escapeHtml(ev)}</b><small>${trades.toLocaleString('pt-BR')} operações em ${opportunities.toLocaleString('pt-BR')} oportunidades · EV/operação ${escapeHtml(evPerTrade)} · acaso com a mesma cobertura ${escapeHtml(benchmark)} · ${escapeHtml(verdict)}</small></div>`;
   }).join('');
@@ -897,6 +901,12 @@ function renderCloudMonitor(snapshot = state.cloud.snapshot, { loading = state.c
   }
   if (snapshot && snapshot.diagnosticsFetchedAt) {
     detailText += ` Diagnósticos consultados em ${cloudDateTime(snapshot.diagnosticsFetchedAt)}.`;
+  }
+  const summaryDates = Object.values(snapshot?.summaryAsOf || {}).filter(value => Number.isFinite(value));
+  if (summaryDates.length) {
+    const oldest = Math.min(...summaryDates), newest = Math.max(...summaryDates);
+    detailText += ` Resumos históricos calculados entre ${cloudDateTime(oldest)} e ${cloudDateTime(newest)}; atualização prevista a cada 15 minutos.`;
+    if (Date.now() - oldest > 20 * 60_000) detailText += ' Atenção: há resumo histórico com atualização atrasada.';
   }
   if (snapshot && snapshot.staleSections && snapshot.staleSections.length) {
     detailText += ' Algumas seções exibem dados anteriores; confira a data de cada registro.';
