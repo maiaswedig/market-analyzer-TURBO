@@ -399,7 +399,7 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
     ['health', 'cloud_system_health', { select: '*', limit: 1 }]
   ];
   // Fetch the live signal first; never fan out fourteen expensive views at once.
-  const selectedCalls = includeDiagnostics ? calls : calls.filter(([name]) => ['canonical', 'health'].includes(name));
+  const selectedCalls = includeDiagnostics ? calls : calls.filter(([name]) => ['canonical', 'opportunities', 'health'].includes(name));
   const settled = new Array(selectedCalls.length);
   let cursor = 0;
   async function worker() {
@@ -493,6 +493,13 @@ export async function loadCloudDashboard({ limit = 16, historyLimit = 200, timeo
     ? (canonicalSignals.length ? 'fresh' : 'empty')
     : snapshot.canonicalSignals.length ? 'stale' : 'unavailable';
   snapshot.diagnosticsFetchedAt = includeDiagnostics ? Date.now() : cached?.diagnosticsFetchedAt || null;
+  snapshot.summaryAsOf = { ...(cached?.summaryAsOf || {}) };
+  for (const name of ['paper', 'qualityPaper', 'strategyLab', 'naiveBaselines', 'gradeCalibration', 'gradeASessions']) {
+    if (Object.hasOwn(payload, name)) {
+      const dates = rows(payload[name]).map(row => Date.parse(row.cached_as_of)).filter(Number.isFinite);
+      snapshot.summaryAsOf[name] = dates.length ? Math.min(...dates) : null;
+    }
+  }
   await writeCache(snapshot, selectedMode);
   return snapshot;
 }
